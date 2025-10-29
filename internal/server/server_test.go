@@ -171,6 +171,13 @@ func Test_buildEngine_TestEndpoints(t *testing.T) {
 		require.Equal(t, http.StatusOK, w.Code)
 	})
 
+	t.Run("metrics OK", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+		w := httptest.NewRecorder()
+		engine.ServeHTTP(w, req)
+		require.Equal(t, http.StatusOK, w.Code)
+	})
+
 	t.Run("auth without forwarded headers Forbidden", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/v1/auth", nil)
 		w := httptest.NewRecorder()

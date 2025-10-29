@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+env:
+  CHART_DIR: charts/casbin-traefik-forward-auth
+
+jobs:
+  pre-release-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Check chart/app/git tag versions
+        uses: ./.github/actions/check-chart-version
+        with:
+          chart_dir: ${{ env.CHART_DIR }}
+          app_version: ${{ github.ref_name }}
+  verify-code:
+     uses: ./.github/workflows/_verify-code.yaml
+     needs: pre-release-check
+  verify-chart:
+     uses: ./.github/workflows/_verify-chart.yaml
+     needs: pre-release-check
+  publish-release:
+    uses: ./.github/workflows/_publish.yaml
+    needs:
+      - verify-code
+      - verify-chart
+    with:
+      push_image: true
+      push_chart: true
+      go_releaser: true

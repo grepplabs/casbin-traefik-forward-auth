@@ -1,20 +1,26 @@
 # Casbin Traefik Forward Auth
 
+[![Build](https://github.com/grepplabs/casbin-traefik-forward-auth/actions/workflows/build.yml/badge.svg)](https://github.com/grepplabs/casbin-traefik-forward-auth/actions/workflows/build.yml)
+
 A ForwardAuth service for Traefik with [Casbin-based](https://casbin.org/) authorization.
 
 This service provides a forward authentication endpoint for Traefik, allowing you to protect your services with fine-grained access control policies defined using Casbin.
 It acts as a gatekeeper, intercepting requests from Traefik, evaluating them against your Casbin policies, and then allowing or denying the request based on the outcome.
 
 ## TODO
-- [ ] github actions docker + helm
-- [ ] add git version to build, print on startup
-- [ ] prometheus metrics
-- [ ] header jwt validator / oidc (must when claim is used), return 401 to traefik
+- [ ] header jwt validator / oidc (must when claim is used), return 401 to traefik use errors like error.New("Unauthorized")
   - [ ] add jwt middleware to authEngine
-- [ ] optional own jwt - return in `X-` header
+- [ ] optional own jwt - return in `X-` header or use shared secret for testing
 - [ ] tls + cert manager (cert source)
-  - [ ] separate (unprotected) health and metrics port
+  - [ ] separate (unprotected) health and metrics port ?
+- [ ] test with ingress annotation only
+- [ ] renovate / dependency bot
+- [ ] demo with KEYMATCH, claims and keycloak, file to crd converter, add traefik middleware, annotate ingress. embed **GIF** in the README.md
+  - [ ] asciinema + svg-term, https://github.com/charmbracelet/vhs
+- [ ] casbin-kube/tools/converter module, go template => convert file/http to CRD, provide namespace and labels
+  - [ ] add docs to casbin-kube README.md
 
+ 
 ### Key Features
 
 - **Flexible Access Control:** Define authorization policies using the powerful Casbin model.  
@@ -24,6 +30,32 @@ It acts as a gatekeeper, intercepting requests from Traefik, evaluating them aga
   - For Kubernetes-based policies, rely on native **Informer** mechanisms to watch for changes - no separate Casbin watcher required.  
 - **Request-Based Authorization:** Authorize requests based on headers, JWT claims, query parameters, and more.  
 - **Declarative Configuration:** Configure authorization rules and routes using a simple YAML file.
+
+    - Example Routing Configuration **KEYMATCH Model**
+
+    ```yaml
+    routes:
+      - httpMethod: ANY
+        relativePaths:
+          - /*any
+        params:
+          - name: user
+            source: basicAuthUser
+          - name: resource
+            source: urlPath
+          - name: method
+            source: httpMethod
+        rules:
+          - format: "%s"
+            paramNames: [ user ]
+          - format: "%s"
+            paramNames: [ resource ]
+          - format: "%s"
+            paramNames: [ method ]
+    ```
+    [keymatch_model.conf](https://github.com/casbin/casbin/blob/master/examples/keymatch_model.conf)
+    [keymatch_policy.csv](https://github.com/casbin/casbin/blob/master/examples/keymatch_policy.csv)
+
 
 ## Architecture
 
@@ -149,8 +181,6 @@ The routing configuration is defined in a YAML file specified by `auth-route-con
 
 ### Examples
 
----
-
 #### **RBAC Example: Role-Based Access Control**
 
 This example demonstrates how a Pub/Sub-style authorization flow can be expressed using Casbin rules and route-based parameter extraction.
@@ -229,37 +259,6 @@ Authorization: Bearer <token>
 | **Resource** | `pubsub:eu-central-1:p123:topics/orders` |
 | **Action** | `pubsub:publish` |
 
----
-
-#### **KEYMATCH Model Example**
-
-##### Routing Configuration
-
-```yaml
-routes:
-  - httpMethod: ANY
-    relativePaths:
-      - /*any
-    params:
-      - name: user
-        source: basicAuthUser
-      - name: resource
-        source: urlPath
-      - name: method
-        source: httpMethod
-    rules:
-      - format: "%s"
-        paramNames: [ user ]
-      - format: "%s"
-        paramNames: [ resource ]
-      - format: "%s"
-        paramNames: [ method ]
-```
-
-* [keymatch_model.conf](https://github.com/casbin/casbin/blob/master/examples/keymatch_model.conf)
-* [keymatch_policy.csv](https://github.com/casbin/casbin/blob/master/examples/keymatch_policy.csv)
-
----
 
 ## Helm Chart
 
@@ -311,6 +310,13 @@ The following table lists the configurable parameters of the casbin-traefik-forw
 | `nodeSelector` | object | `{}` | Node selector for pod scheduling. |
 | `tolerations` | list | `[]` | Tolerations for pod scheduling. |
 | `affinity` | object | `{}` | Affinity for pod scheduling. |
+| `serviceMonitor.enabled` | bool | `false` | If `true`, a `ServiceMonitor` resource will be created for Prometheus Operator scraping. |
+| `serviceMonitor.interval` | string | `"15s"` | Scrape interval used by Prometheus. |
+| `serviceMonitor.scrapeTimeout` | string | `"10s"` | Scrape timeout used by Prometheus. |
+| `serviceMonitor.additionalLabels` | object | `{}` | Extra labels to add to the `ServiceMonitor` metadata (for example `release: prometheus`). |
+| `serviceMonitor.namespace` | string | `""` | If set, the `ServiceMonitor` will select this namespace via `.spec.namespaceSelector.matchNames`. If empty, Prometheus is expected to scrape in the same namespace. |
+| `serviceMonitor.relabelings` | list | `[]` | List of `relabelings` applied to samples before ingestion. |
+| `serviceMonitor.metricRelabelings` | list | `[]` | List of `metricRelabelings` applied to scraped metrics. |
 | `application.env` | object | `{}` | Environment variables for the application. |
 | `application.authRouteConfig` | object | `{}` | Route configuration for the application. |
 | `application.adapter.kube.namespace` | string | `""` | Kubernetes namespace where Casbin policies are stored. |

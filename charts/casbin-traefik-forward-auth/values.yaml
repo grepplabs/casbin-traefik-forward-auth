@@ -146,6 +146,15 @@ tolerations: []
 
 affinity: {}
 
+serviceMonitor:
+  enabled: false
+  interval: 15s
+  scrapeTimeout: 10s
+  additionalLabels: {}
+  namespace: ""
+  relabelings: []
+  metricRelabelings: []
+
 application:
   env:
   authRouteConfig: {}

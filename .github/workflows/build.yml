@@ -1,0 +1,27 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - "**"
+    tags-ignore:
+      - '**'
+    paths-ignore:
+      - 'README.md'
+  pull_request:
+    paths-ignore:
+      - 'README.md'
+jobs:
+  verify-code:
+    uses: ./.github/workflows/_verify-code.yaml
+  verify-chart:
+    uses: ./.github/workflows/_verify-chart.yaml
+  publish-image:
+    uses: ./.github/workflows/_publish.yaml
+    needs:
+      - verify-code
+      - verify-chart
+    with:
+      push_image: true
+      push_chart: false
+      go_releaser: false

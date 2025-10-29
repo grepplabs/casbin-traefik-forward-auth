@@ -7,12 +7,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"runtime/debug"
 	"time"
 
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"github.com/grepplabs/casbin-traefik-forward-auth/internal/auth"
 	"github.com/grepplabs/loggo/zlog"
+	ginprometheus "github.com/zsais/go-gin-prometheus"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 
@@ -28,6 +30,7 @@ const (
 	HeaderHost            = "Host"
 )
 
+// nolint: funlen
 func buildEngine(cfg config.Config) (*gin.Engine, Closers, error) {
 	closers := make(Closers, 0)
 
@@ -37,9 +40,12 @@ func buildEngine(cfg config.Config) (*gin.Engine, Closers, error) {
 	engine := gin.New()
 	engine.Use(ginzap.GinzapWithConfig(engineLogger, &ginzap.Config{
 		TimeFormat: time.RFC3339,
-		SkipPaths:  []string{"/healthz", "/readyz"},
+		SkipPaths:  []string{"/healthz", "/readyz", "/metrics"},
 	}))
 	engine.Use(ginzap.RecoveryWithZap(engineLogger, true))
+	ginprometheus.NewWithConfig(ginprometheus.Config{
+		DisableBodyReading: true,
+	}).Use(engine)
 
 	authEngineLogger := zlog.LogSink.WithOptions(zap.WithCaller(false)).With(zap.String("engine", "auth"))
 	authEngine := gin.New()
@@ -97,8 +103,15 @@ func Start(cfg config.Config) error {
 	if err != nil {
 		return fmt.Errorf("error building engine: %w", err)
 	}
-	zlog.Infof("starting server on %s", cfg.Server.Addr)
+	zlog.Infof("starting server on %s (version: %s)", cfg.Server.Addr, getVersion())
 	return engine.Run(cfg.Server.Addr)
+}
+
+func getVersion() string {
+	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" {
+		return bi.Main.Version
+	}
+	return config.Version
 }
 
 func loadRouteConfig(path string) (*auth.RouteConfig, error) {

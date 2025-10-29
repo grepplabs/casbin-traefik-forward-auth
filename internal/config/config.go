@@ -6,6 +6,11 @@ import (
 	casbinkube "github.com/grepplabs/casbin-kube"
 )
 
+var (
+	// Version is the current version of the app, generated at build time
+	Version = "unknown"
+)
+
 const (
 	AdapterFile = "file"
 	AdapterKube = "kube"

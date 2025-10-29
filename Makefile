@@ -3,9 +3,14 @@ SHELL := /usr/bin/env bash
 .DEFAULT_GOAL := help
 
 ROOT_DIR       = $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+VERSION       ?= $(shell git describe --tags --always --dirty)
+
+TAG := v0.0.1
+CHART_FILE := charts/casbin-traefik-forward-auth/Chart.yaml
 
 GOLANGCI_LINT_VERSION := v2.4.0
 
+DOCKER_BUILD_ARGS ?=
 LOCAL_IMAGE := local/casbin-traefik-forward-auth:latest
 LOCAL_CLUSTER_ROOT_DIR ?= $(ROOT_DIR)/test/scripts/local/local-cluster
 LOCAL_CLUSTER_NAME ?= casbin-traefik
@@ -17,7 +22,6 @@ LOCAL_KUBECONFIG ?= $(ROOT_DIR)/kubeconfig-$(LOCAL_CLUSTER_NAME)
 .PHONY: help
 help: ## display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
-
 
 ## Tool Binaries
 GO_RUN := go run
@@ -64,7 +68,35 @@ clean: local-cluster-delete ## clean
 
 .PHONY: docker-build
 docker-build: ## build docker image
-	docker build -t ${LOCAL_IMAGE} .
+	docker build --build-arg VERSION=$(VERSION) $(DOCKER_BUILD_ARGS) -t ${LOCAL_IMAGE} .
+
+##@ Release
+
+.PHONY: release
+release: ## update helm chart version and appVersion and push tag
+	@if git rev-parse $(TAG) >/dev/null 2>&1; then \
+		echo "Tag $(TAG) already exists. Aborting."; \
+		exit 1; \
+	fi
+	@read -p "Are you sure you want to release $(TAG)? [y/N] " confirm; \
+	if [ "$$confirm" != "y" ] && [ "$$confirm" != "Y" ] && [ "$$confirm" != "yes" ] && [ "$$confirm" != "YES" ]; then \
+		echo "Aborted."; \
+		exit 1; \
+	fi;
+
+	@echo "Updating Helm chart to version $(TAG)..."
+	@yq eval -i '.version = "$(subst v,,$(TAG))"' $(CHART_FILE)
+	@yq eval -i '.appVersion = "$(TAG)"' $(CHART_FILE)
+	@echo "Chart.yaml updated:"
+	@yq eval '.version, .appVersion' $(CHART_FILE)
+	@git add $(CHART_FILE)
+	@git commit -m "prepare release: bump chart version to $(TAG)" || echo "No changes to commit."
+
+	@echo "Creating and pushing Git tag $(TAG)..."
+	@git tag $(TAG)
+	@git push origin HEAD
+	@git push origin $(TAG)
+	@echo "Done."
 
 ##@ Run targets
 
