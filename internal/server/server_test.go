@@ -1,13 +1,17 @@
 package server
 
 import (
+	"encoding/base64"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/grepplabs/casbin-traefik-forward-auth/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -190,5 +194,58 @@ func Test_buildEngine_TestEndpoints(t *testing.T) {
 		w := httptest.NewRecorder()
 		engine.ServeHTTP(w, req)
 		require.Equal(t, http.StatusNotFound, w.Code)
+	})
+}
+
+func Test_buildEngine_JWTNoneMode(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	jwtCfg := config.JWTConfig{
+		Enabled:     true,
+		JWKSURL:     "none", // no keys in jwks
+		InitTimeout: 5 * time.Second,
+		Issuer:      "https://issuer.example.internal",
+		Audience:    "my-audience",
+		UseX509:     false,
+	}
+
+	cfg := newTestFileAdapterConfig(t, "rbac_model.conf", "", "")
+	cfg.Auth.JWTConfig = jwtCfg
+
+	engine, closers, err := buildEngine(cfg)
+	require.NoError(t, err)
+	defer closers.Close()
+
+	t.Run("no Bearer token -> returns 401 Unauthorized", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/v1/auth", nil)
+		req.Header.Set(HeaderForwardedMethod, http.MethodGet)
+		req.Header.Set(HeaderForwardedHost, "svc.local")
+		req.Header.Set(HeaderForwardedURI, "/some/resource")
+		req.Header.Set(HeaderForwardedProto, "http")
+		req.Header.Set(HeaderForwardedFor, "1.2.3.4")
+
+		w := httptest.NewRecorder()
+		engine.ServeHTTP(w, req)
+
+		require.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+
+	t.Run("with invalid Bearer token -> returns 401 Unauthorized", func(t *testing.T) {
+		header := base64.RawURLEncoding.EncodeToString([]byte(`{"typ":"JWT"}`))
+		payload := base64.RawURLEncoding.EncodeToString([]byte(`{"sub":"alice"}`))
+		token := fmt.Sprintf("%s.%s.", header, payload) // no signature
+
+		req := httptest.NewRequest(http.MethodGet, "/v1/auth", nil)
+		req.Header.Set(HeaderForwardedMethod, http.MethodGet)
+		req.Header.Set(HeaderForwardedHost, "svc.local")
+		req.Header.Set(HeaderForwardedURI, "/some/resource")
+		req.Header.Set(HeaderForwardedProto, "http")
+		req.Header.Set(HeaderForwardedFor, "1.2.3.4")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		w := httptest.NewRecorder()
+		engine.ServeHTTP(w, req)
+
+		require.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 }

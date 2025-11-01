@@ -18,14 +18,16 @@ import (
 )
 
 func newJWKSet(ctx context.Context, config config.JWTConfig) (jwk.Set, error) {
+	if strings.EqualFold(config.JWKSURL, "none") {
+		return jwk.NewSet(), nil
+	}
 	if isFileSet(&config) {
 		return newFileJWKSet(config)
-	} else {
-		if _, err := url.ParseRequestURI(config.JWKSURL); err != nil {
-			return nil, fmt.Errorf("invalid JWKS URL: %w", err)
-		}
-		return newHttpJWKSet(ctx, config)
 	}
+	if _, err := url.ParseRequestURI(config.JWKSURL); err != nil {
+		return nil, fmt.Errorf("invalid JWKS URL: %w", err)
+	}
+	return newHttpJWKSet(ctx, config)
 }
 
 func isFileSet(config *config.JWTConfig) bool {

@@ -104,6 +104,9 @@ linters:
           - errcheck
           - gosec
           - intrange
+          - unparam
+          - funlen
+          - cyclop
       - linters:
           - lll
         path: api/*
