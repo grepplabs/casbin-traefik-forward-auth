@@ -1,0 +1,51 @@
+## Inspect config
+
+Hide
+Type "clear" Enter
+Show
+
+Type "echo '🔍 Let’s inspect the configuration...'" Sleep 500ms Enter
+Enter
+Sleep 1s
+
+### traefik middleware
+
+Hide
+Type "clear" Enter
+Show
+
+Type "kubectl get middleware -n traefik casbin-auth -o yaml | yq" Sleep 500ms Enter
+Enter
+Sleep 2s
+
+Type "echo 'casbin-traefik-forward-auth acts as Traefik ForwardAuth middleware.'"
+Enter
+Sleep 5s
+
+### casbin-auth-env
+
+Hide
+Type "clear" Enter
+Show
+
+Type "kubectl get cm -n casbin-auth casbin-auth-env -o yaml | yq '.data'" Sleep 500ms Enter
+Enter
+Sleep 2s
+
+Type "echo 'Keycloak is enabled as the authentication provider via JWT validation'" Sleep 500ms Enter
+Enter
+Sleep 5s
+
+### casbin-auth-config
+
+Hide
+Type "clear" Enter
+Show
+
+Type "kubectl get cm -n casbin-auth casbin-auth-config -o yaml | yq '.data'" Sleep 500ms Enter
+Enter
+Sleep 2s
+
+Type "echo 'Casbin authorization input: subject -> preferred_username JWT claim, object -> URL path, action -> HTTP method'" Sleep 500ms Enter
+Enter
+Sleep 5s

@@ -1,0 +1,18 @@
+## Applied rules
+
+Hide
+Type "clear" Enter
+Show
+
+Type "echo '🧩  Let’s see the applied rules...'" Sleep 500ms Enter
+Enter
+Sleep 1s
+
+Type "kubectl get rules.casbin.grepplabs.com -n casbin-auth" Sleep 500ms Enter
+Enter
+Sleep 1s
+
+Type "kubectl get rules -n casbin-auth rule-e780692ab98c450477d512fbef349f1be073ecd41121ee9e3cb6a9118392016b -o yaml" Sleep 500ms Enter
+Enter
+Sleep 5s
+

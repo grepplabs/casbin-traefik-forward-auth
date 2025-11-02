@@ -1,0 +1,17 @@
+## Settings
+Output demo-keymatch.gif
+
+Require echo
+
+Set Shell "bash"
+Set FontSize 16
+Set Width 1400
+Set Height 800
+Set Padding 32
+
+Set BorderRadius 12
+Set WindowBar Colorful
+Set WindowBarSize 36
+Set Margin 0
+Set MarginFill "#000000"
+

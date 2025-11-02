@@ -1,0 +1,4 @@
+*.gif
+/kind-config-casbin-vhs.yaml
+/kubeconfig-casbin-vhs
+*.csv

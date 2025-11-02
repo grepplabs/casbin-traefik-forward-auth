@@ -1,0 +1,23 @@
+## Forbidden
+
+Hide
+Type "clear" Enter
+Show
+
+### forbidden
+
+Hide
+Type "clear" Enter
+Show
+
+Type "echo '⚠️  Alice has insufficient permissions; request returns 403 Forbidden.'" Sleep 500ms Enter
+Enter
+Sleep 2s
+
+Type "curl -I --oauth2-bearer ${TOKEN} -X GET http://echo.127.0.0.1.nip.io:30081/alice_data/resource3" Sleep 500ms Enter
+Enter
+Sleep 2s
+
+Type "echo 'Let’s configure Casbin access policies.'" Sleep 500ms Enter
+Enter
+Sleep 5s

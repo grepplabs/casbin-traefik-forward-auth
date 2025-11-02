@@ -1,0 +1,31 @@
+## Policies
+
+Hide
+Type "clear" Enter
+Show
+
+### download policies
+
+Hide
+Type "clear" Enter
+Show
+
+Type "echo '⬇️  Let’s download the KeyMatch example policies.'" Sleep 500ms Enter
+Enter
+Sleep 2s
+
+Type "curl -s https://raw.githubusercontent.com/casbin/casbin/refs/heads/master/examples/keymatch_policy.csv -o keymatch_policy.csv" Sleep 500ms Enter
+Enter
+Sleep 2s
+
+Type "(cat keymatch_policy.csv; echo)" Sleep 500ms Enter
+Enter
+Sleep 2s
+
+Type "echo 'Use casbin-kube-converter to convert downloaded CSV policies into Casbin Kube Kubernetes Custom Resources.'" Sleep 500ms Enter
+Enter
+Sleep 2s
+
+Type "casbin-kube-converter -i ./keymatch_policy.csv -n casbin-auth | kubectl apply -f-" Sleep 500ms Enter
+Enter
+Sleep 5s

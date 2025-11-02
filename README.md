@@ -67,6 +67,13 @@ allowing or denying the request based on the outcome.
       upstream service.
     * If JWT is enabled and validation fails, returns `401 Unauthorized`.
 
+## 🎬 Demo
+Demo showing request authorization with **Casbin Traefik Forward Auth** and the **KEYMATCH** policy model.
+
+<p style="text-align: left;">
+  <img src="docs/demo-keymatch.gif" alt="Casbin Traefik Forward Auth Demo" style="max-width: 100%; width: 1400px; height: auto;">
+</p>
+
 ### Installation
 
 #### Prerequisites (for Kube Adapter)

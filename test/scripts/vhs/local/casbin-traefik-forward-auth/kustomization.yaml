@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: casbin-auth
+
+resources:
+  - namespace.yaml
+
+helmGlobals:
+  chartHome: ../../../../../charts
+
+helmCharts:
+  - name: casbin-traefik-forward-auth
+    releaseName: casbin-auth
+    namespace: casbin-auth
+    valuesFile: values.yaml

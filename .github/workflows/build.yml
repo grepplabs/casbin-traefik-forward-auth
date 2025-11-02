@@ -8,9 +8,13 @@ on:
       - '**'
     paths-ignore:
       - 'README.md'
+      - "test/scripts/vhs/**"
+      - "docs/**"
   pull_request:
     paths-ignore:
       - 'README.md'
+      - "test/scripts/vhs/**"
+      - "docs/**"
 jobs:
   verify-code:
     uses: ./.github/workflows/_verify-code.yaml

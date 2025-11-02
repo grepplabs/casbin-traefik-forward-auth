@@ -1,0 +1,10 @@
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: casbin-auth
+  namespace: traefik
+spec:
+  forwardAuth:
+    address: http://casbin-auth.casbin-auth.svc.cluster.local/v1/auth
+    trustForwardHeader: true

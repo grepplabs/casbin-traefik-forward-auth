@@ -1,0 +1,39 @@
+## Enable middleware
+
+Hide
+Type "clear" Enter
+### disable middleware
+Type "kubectl annotate ingress echo -n default traefik.ingress.kubernetes.io/router.middlewares-" Enter
+Show
+
+### unprotected service
+
+Hide
+Type "clear" Enter
+Show
+
+Type "echo '⚠️  Echo service is unprotected; request returns 200 OK.'" Sleep 500ms Enter
+Enter
+Sleep 2s
+
+Type "curl -I http://echo.127.0.0.1.nip.io:30081/alice_data/resource3" Sleep 500ms Enter
+Enter
+Sleep 5s
+
+### enable middleware
+
+Type "echo '🔐  Let’s enable Traefik ForwardAuth middleware and try the request again!'" Sleep 500ms Enter
+Enter
+Sleep 2s
+
+Type "kubectl annotate ingress echo 'traefik.ingress.kubernetes.io/router.middlewares=traefik-casbin-auth@kubernetescrd' --overwrite" Sleep 500ms Enter
+Enter
+Sleep 2s
+
+Type "curl -I http://echo.127.0.0.1.nip.io:30081/alice_data/resource3" Sleep 500ms Enter
+Enter
+Sleep 2s
+
+Type "echo '🚫  Request returned 401 Unauthorized - a valid JWT token is required.'" Sleep 500ms Enter
+Enter
+Sleep 5s

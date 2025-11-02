@@ -1,0 +1,27 @@
+## Access granted
+
+Hide
+Type "clear" Enter
+Show
+
+### ok
+
+Hide
+Type "clear" Enter
+Show
+
+Type "echo '✅  Alice has permission to access her resource; request returns 200 OK.'" Sleep 500ms Enter
+Enter
+Sleep 2s
+
+Type "curl -I --oauth2-bearer ${TOKEN} -X GET http://echo.127.0.0.1.nip.io:30081/alice_data/resource3" Sleep 500ms Enter
+Enter
+Sleep 2s
+
+Type "echo '🚫  Alice cannot access Cathy’s resources - request returns 403 Forbidden.'"
+Enter
+Sleep 2s
+
+Type "curl -I --oauth2-bearer ${TOKEN} -X GET http://echo.127.0.0.1.nip.io:30081/cathy_data" Sleep 500ms Enter
+Enter
+Sleep 20s

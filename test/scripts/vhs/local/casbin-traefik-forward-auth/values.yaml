@@ -1,0 +1,34 @@
+fullnameOverride: casbin-auth
+
+image:
+  repository: local/casbin-traefik-forward-auth
+  tag: latest
+
+application:
+  env:
+    LOG_FORMAT: "text"
+    CASBIN_MODEL: keymatch_model.conf
+    JWT_ENABLED: "true"
+    JWT_JWKS_URL: http://keycloak.keycloak.svc.cluster.local:8080/realms/master/protocol/openid-connect/certs
+    JWT_ISSUER: http://localhost:30082/realms/master
+    JWT_AUDIENCE: account
+  authRouteConfig:
+    routes:
+      - httpMethod: ANY
+        relativePaths:
+          - /*any
+        params:
+          - name: user
+            source: claim
+            expr: preferred_username
+          - name: resource
+            source: urlPath
+          - name: method
+            source: httpMethod
+        rules:
+          - format: "%s"
+            paramNames: [ user ]
+          - format: "%s"
+            paramNames: [ resource ]
+          - format: "%s"
+            paramNames: [ method ]

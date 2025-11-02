@@ -1,0 +1,17 @@
+## Set token
+
+Hide
+Type "clear" Enter
+Show
+
+Type "export TOKEN=$(curl -s -d 'grant_type=password' -d 'client_id=local-cli-client' -d 'username=alice' -d 'password=alicepw' http://localhost:30082/realms/master/protocol/openid-connect/token | jq -r '.access_token')" Sleep 500ms Enter
+Enter
+Sleep 1s
+
+Type "echo '🔍  Inspecting Alice’s JWT token to see her claims...'" Sleep 500ms Enter
+Enter
+Sleep 2s
+
+Type "jwt decode $TOKEN --json | jq -r '.payload'" Sleep 500ms Enter
+Enter
+Sleep 5s
