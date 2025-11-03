@@ -1,6 +1,7 @@
 # Casbin Traefik Forward Auth
 
 [![Build](https://github.com/grepplabs/casbin-traefik-forward-auth/actions/workflows/build.yml/badge.svg)](https://github.com/grepplabs/casbin-traefik-forward-auth/actions/workflows/build.yml)
+[![Release](https://img.shields.io/github/v/release/grepplabs/casbin-traefik-forward-auth?sort=semver)](https://github.com/grepplabs/casbin-traefik-forward-auth/releases)
 
 A ForwardAuth service for [Traefik](https://traefik.io/) with [Casbin-based](https://casbin.org/) authorization.
 
