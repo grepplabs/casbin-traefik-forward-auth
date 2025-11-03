@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/grepplabs/casbin-traefik-forward-auth/internal/config"
+	tlsconfig "github.com/grepplabs/cert-source/config"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -42,32 +43,58 @@ func TestNewJWKSet_JWKSURLNone_ReturnsEmptySet(t *testing.T) {
 	require.Equal(t, 0, set.Len())
 }
 
-func TestNewJWKSet_LoadsFromGoogle(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	cfg := config.JWTConfig{
-		Enabled:     true,
-		JWKSURL:     "https://www.googleapis.com/oauth2/v3/certs",
-		InitTimeout: 10 * time.Second,
-		Issuer:      "https://accounts.google.com",
-		Audience:    "test-audience",
+func TestNewJWKSet(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  config.JWTConfig
+	}{
+		{
+			name: "LoadsFromGoogle",
+			cfg: config.JWTConfig{
+				Enabled:     true,
+				JWKSURL:     "https://www.googleapis.com/oauth2/v3/certs",
+				InitTimeout: 10 * time.Second,
+				Issuer:      "https://accounts.google.com",
+				Audience:    "test-audience",
+			},
+		},
+		{
+			name: "LoadsFromGoogleTLS",
+			cfg: config.JWTConfig{
+				Enabled:     true,
+				JWKSURL:     "https://www.googleapis.com/oauth2/v3/certs",
+				InitTimeout: 10 * time.Second,
+				Issuer:      "https://accounts.google.com",
+				Audience:    "test-audience",
+				TLS: tlsconfig.TLSClientConfig{
+					Enable:             true,
+					InsecureSkipVerify: true,
+				},
+			},
+		},
 	}
 
-	loadedSet, err := newJWKSet(ctx, cfg)
-	if err != nil {
-		// make the test optional
-		t.Skipf("skipping: could not load JWKS from remote source: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			loadedSet, err := newJWKSet(ctx, tt.cfg)
+			if err != nil {
+				t.Skipf("skipping: could not load JWKS from remote source: %v", err)
+			}
+
+			require.NotNil(t, loadedSet, "expected non-nil JWK set")
+			require.Positive(t, loadedSet.Len(), "expected JWK set length > 0")
+
+			firstKey, ok := loadedSet.Key(0)
+			require.True(t, ok, "expected to retrieve first key")
+
+			kid, ok := firstKey.KeyID()
+			require.True(t, ok, "expected key to have key ID")
+			assert.NotEmpty(t, kid, "expected non-empty key ID")
+		})
 	}
-	require.NotNil(t, loadedSet)
-	require.Positive(t, loadedSet.Len())
-
-	firstKey, ok := loadedSet.Key(0)
-	require.True(t, ok)
-
-	kid, ok := firstKey.KeyID()
-	require.True(t, ok)
-	assert.NotEmpty(t, kid)
 }
 
 func TestNewJWKSet_LoadsFromHTTPServer(t *testing.T) {
@@ -122,6 +149,85 @@ func TestNewJWKSet_LoadsFromHTTPServer(t *testing.T) {
 	loadedKID, ok := loadedKey.KeyID()
 	require.True(t, ok)
 	assert.Equal(t, origKID, loadedKID)
+}
+
+func TestNewJWKSet_LoadsFromHTTPServerTLS(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	tmpDir := t.TempDir()
+	publicPath := filepath.Join(tmpDir, "public.jwks.json")
+
+	_, origSet, err := generateJWKS("", publicPath)
+	require.NoError(t, err)
+	require.Equal(t, 1, origSet.Len())
+
+	jwksBytes, err := os.ReadFile(publicPath)
+	require.NoError(t, err)
+
+	const certsPath = "/realms/master/protocol/openid-connect/certs"
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if r.URL.Path != certsPath {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(jwksBytes)
+	}))
+	defer server.Close()
+
+	rootCA := storeTLSServerCertPEM(t, server)
+
+	cfg := config.JWTConfig{
+		Enabled:     true,
+		JWKSURL:     server.URL + certsPath,
+		InitTimeout: 5 * time.Second,
+		Issuer:      "https://issuer.example.internal",
+		Audience:    "my-audience",
+		TLS: tlsconfig.TLSClientConfig{
+			Enable: true,
+			File: tlsconfig.TLSClientFiles{
+				RootCAs: rootCA,
+			},
+		},
+	}
+	loadedSet, err := newJWKSet(ctx, cfg)
+	require.NoError(t, err)
+	require.NotNil(t, loadedSet)
+	require.Equal(t, 1, loadedSet.Len())
+
+	origKey, ok := origSet.Key(0)
+	require.True(t, ok)
+	loadedKey, ok := loadedSet.Key(0)
+	require.True(t, ok)
+
+	origKID, ok := origKey.KeyID()
+	require.True(t, ok)
+	loadedKID, ok := loadedKey.KeyID()
+	require.True(t, ok)
+	assert.Equal(t, origKID, loadedKID)
+}
+
+func storeTLSServerCertPEM(t *testing.T, server *httptest.Server) string {
+	t.Helper()
+
+	tmpDir := t.TempDir()
+	certPath := filepath.Join(tmpDir, "server-cert.pem")
+
+	cert := server.Certificate()
+	certPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: cert.Raw,
+	})
+
+	if err := os.WriteFile(certPath, certPEM, 0o600); err != nil {
+		t.Fatalf("failed to write server certificate to %s: %v", certPath, err)
+	}
+	return certPath
 }
 
 func TestNewJWKSet_LoadsFromFileURL(t *testing.T) {

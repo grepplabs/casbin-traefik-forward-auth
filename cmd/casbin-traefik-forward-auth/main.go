@@ -55,6 +55,15 @@ func main() {
 	root.Flags().DurationVar(&cfg.Auth.JWTConfig.MaxRefreshInterval, "jwt-max-refresh-interval", 0, "Maximum interval between JWKS refresh attempts.")
 	root.Flags().BoolVar(&cfg.Auth.JWTConfig.UseX509, "jwt-use-x509", false, "Indicates that the JWKS source contains X.509-encoded keys (PEM certificates) instead of standard JWK JSON.")
 
+	root.Flags().BoolVar(&cfg.Auth.JWTConfig.TLS.Enable, "jwt-tls-enable", false, "Enable TLS configuration for the JWKS HTTPS client.")
+	root.Flags().DurationVar(&cfg.Auth.JWTConfig.TLS.Refresh, "jwt-tls-refresh", 0, "Interval for reloading client TLS certificates. Set to 0 to disable auto-refresh.")
+	root.Flags().BoolVar(&cfg.Auth.JWTConfig.TLS.InsecureSkipVerify, "jwt-tls-insecure-skip-verify", false, "Skip server certificate verification (insecure; use only for testing).")
+	root.Flags().BoolVar(&cfg.Auth.JWTConfig.TLS.UseSystemPool, "jwt-tls-use-system-pool", true, "Use the system certificate pool for verifying server certificates.")
+	root.Flags().StringVar(&cfg.Auth.JWTConfig.TLS.KeyPassword, "jwt-tls-key-password", "", "Password to decrypt RSA private key.")
+	root.Flags().StringVar(&cfg.Auth.JWTConfig.TLS.File.RootCAs, "jwt-tls-file-root-ca", "", "Path to a custom root CA bundle for verifying the JWKS server.")
+	root.Flags().StringVar(&cfg.Auth.JWTConfig.TLS.File.Key, "jwt-tls-file-key", "", "Path to the client TLS private key file (for mTLS).")
+	root.Flags().StringVar(&cfg.Auth.JWTConfig.TLS.File.Cert, "jwt-tls-file-cert", "", "Path to the client TLS certificate file (for mTLS).")
+
 	// Merge stdlib flags into pflag (so Cobra can see them)
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 

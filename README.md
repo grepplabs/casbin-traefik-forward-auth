@@ -153,6 +153,14 @@ The service is configured using command-line flags or environment variables.
 | `jwt-min-refresh-interval`             | `JWT_MIN_REFRESH_INTERVAL`             | Minimum interval between JWKS refresh attempts.                                                                                | `0`                        |
 | `jwt-max-refresh-interval`             | `JWT_MAX_REFRESH_INTERVAL`             | Maximum interval between JWKS refresh attempts.                                                                                | `0`                        |
 | `jwt-use-x509`                         | `JWT_USE_X509`                         | Indicates that the JWKS source contains X.509-encoded keys (PEM certificates) instead of standard JWK JSON.                    | `false`                    |
+| `jwt-tls-enable`                       | `JWT_TLS_ENABLE`                       | Enable TLS configuration for the JWKS HTTPS client.                                                                            | `false`                    |
+| `jwt-tls-file-cert`                    | `JWT_TLS_FILE_CERT`                    | Path to the client TLS certificate file (for mTLS).                                                                            |                            |
+| `jwt-tls-file-key`                     | `JWT_TLS_FILE_KEY`                     | Path to the client TLS private key file (for mTLS).                                                                            |                            |
+| `jwt-tls-file-root-ca`                 | `JWT_TLS_FILE_ROOT_CA`                 | Path to a custom root CA bundle for verifying the JWKS server.                                                                 |                            |
+| `jwt-tls-key-password`                 | `JWT_TLS_KEY_PASSWORD`                 | Password to decrypt the RSA private key.                                                                                       |                            |
+| `jwt-tls-insecure-skip-verify`         | `JWT_TLS_INSECURE_SKIP_VERIFY`         | Skip server certificate verification (insecure; use only for testing).                                                         | `false`                    |
+| `jwt-tls-refresh`                      | `JWT_TLS_REFRESH`                      | Interval for reloading client TLS certificates. Set to `0` to disable auto-refresh.                                            | `0`                        |
+| `jwt-tls-use-system-pool`              | `JWT_TLS_USE_SYSTEM_POOL`              | Use the system certificate pool for verifying server certificates.                                                             | `true`                     |
 
 ## Routing Configuration
 

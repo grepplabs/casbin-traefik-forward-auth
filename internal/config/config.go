@@ -5,6 +5,7 @@ import (
 	"time"
 
 	casbinkube "github.com/grepplabs/casbin-kube"
+	tlsconfig "github.com/grepplabs/cert-source/config"
 )
 
 var (
@@ -80,6 +81,9 @@ type JWTConfig struct {
 	// UseX509 indicates whether the JWKS file contains X.509-encoded keys (e.g., PEM certificates)
 	// instead of standard JWK JSON. When set to true, the file will be read and parsed as X.509.
 	UseX509 bool
+
+	// TLS config for the HTTPS client used to fetch the JWKS.
+	TLS tlsconfig.TLSClientConfig
 }
 
 func (c *JWTConfig) Validate() error {
