@@ -5,7 +5,7 @@ SHELL := /usr/bin/env bash
 ROOT_DIR       = $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 VERSION       ?= $(shell git describe --tags --always --dirty)
 
-TAG := v0.0.1
+TAG :=
 CHART_FILE := charts/casbin-traefik-forward-auth/Chart.yaml
 
 GOLANGCI_LINT_VERSION := v2.4.0
@@ -74,6 +74,14 @@ docker-build: ## build docker image
 
 .PHONY: release
 release: ## update helm chart version and appVersion and push tag
+	@if [ -z "$(TAG)" ]; then \
+		echo "TAG is required, e.g. 'make release TAG=v0.0.1'"; \
+		exit 1; \
+	fi
+	@if ! echo "$(TAG)" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$$'; then \
+		echo "Invalid TAG format: $(TAG). Must match v*.*.* (e.g. v1.2.3)"; \
+		exit 1; \
+	fi
 	@if git rev-parse $(TAG) >/dev/null 2>&1; then \
 		echo "Tag $(TAG) already exists. Aborting."; \
 		exit 1; \
