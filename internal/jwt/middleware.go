@@ -60,12 +60,12 @@ func (v *Verifier) Middleware() gin.HandlerFunc {
 		}
 		signedJWT, err := extractBearerToken(c.Request)
 		if err != nil {
-			unauthorized(c, err, "missing or malformed bearer token")
+			v.unauthorized(c, err, "missing or malformed bearer token")
 			return
 		}
 		_, err = verifyToken(signedJWT, v.cfg, v.keySet)
 		if err != nil {
-			unauthorized(c, err, "invalid token")
+			v.unauthorized(c, err, "invalid token")
 			return
 		}
 		c.Next()
@@ -80,8 +80,8 @@ func extractBearerToken(req *http.Request) (string, error) {
 	return tokenHeader[7:], nil
 }
 
-func unauthorized(c *gin.Context, cause error, msg string) {
-	c.Header("WWW-Authenticate", `Bearer error="invalid_token"`)
+func (v *Verifier) unauthorized(c *gin.Context, cause error, msg string) {
+	c.Header("WWW-Authenticate", fmt.Sprintf(`Bearer realm="%s", error="invalid_token"`, v.cfg.Issuer))
 	c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 		"error":   msg,
 		"details": cause.Error(),

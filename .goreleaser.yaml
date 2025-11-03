@@ -19,7 +19,7 @@ archives: []
 checksum:
   disable: true
 changelog:
-  use: github
+  use: git
   sort: asc
 
 release:

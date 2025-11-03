@@ -80,7 +80,7 @@ func TestVerifier_Middleware(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		require.Equal(t, http.StatusUnauthorized, w.Code)
-		assert.Equal(t, `Bearer error="invalid_token"`, w.Header().Get("WWW-Authenticate"))
+		assert.Equal(t, `Bearer realm="https://issuer.example.internal", error="invalid_token"`, w.Header().Get("WWW-Authenticate"))
 		assert.Contains(t, w.Body.String(), `"error":"missing or malformed bearer token"`)
 	})
 
@@ -121,7 +121,7 @@ func TestVerifier_Middleware(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		require.Equal(t, http.StatusUnauthorized, w.Code)
-		assert.Equal(t, `Bearer error="invalid_token"`, w.Header().Get("WWW-Authenticate"))
+		assert.Equal(t, `Bearer realm="https://issuer.example.internal", error="invalid_token"`, w.Header().Get("WWW-Authenticate"))
 		assert.Contains(t, w.Body.String(), `"error":"invalid token"`)
 		assert.Contains(t, w.Body.String(), `"details":`)
 	})

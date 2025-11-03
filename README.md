@@ -110,6 +110,7 @@ spec:
     trustForwardHeader: true
     authResponseHeaders:
       - X-Casbin-Auth-JWT
+      - WWW-Authenticate
 
 ``` 
 

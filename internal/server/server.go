@@ -29,6 +29,7 @@ const (
 	HeaderForwardedURI    = "X-Forwarded-Uri"
 	HeaderForwardedFor    = "X-Forwarded-For"
 	HeaderHost            = "Host"
+	HeaderWWWAuthenticate = "WWW-Authenticate"
 )
 
 var (
@@ -90,18 +91,7 @@ func buildEngine(cfg config.Config) (*gin.Engine, Closers, error) {
 	}
 	auth.SetupRoutes(authEngine, routeConfig.Routes, enforcer.SyncedEnforcer)
 
-	engine.GET("/v1/auth", func(c *gin.Context) {
-		reason, err := forwardAuth(c, authEngine)
-		if err == nil {
-			c.String(http.StatusOK, reason)
-			return
-		}
-		if errors.Is(err, ErrUnauthorized) {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
-	})
+	engine.GET("/v1/auth", authHandler(authEngine))
 	engine.GET("/healthz", func(c *gin.Context) {
 		c.Status(http.StatusOK)
 	})
@@ -115,6 +105,28 @@ func buildEngine(cfg config.Config) (*gin.Engine, Closers, error) {
 		return nil, closers, fmt.Errorf("error starting enforcer: %w", err)
 	}
 	return engine, closers, nil
+}
+
+func authHandler(authEngine *gin.Engine) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		reason, headers, err := forwardAuth(c, authEngine)
+		if err == nil {
+			c.String(http.StatusOK, reason)
+			return
+		}
+
+		if errors.Is(err, ErrUnauthorized) {
+			for key, values := range headers {
+				for _, value := range values {
+					c.Writer.Header().Add(key, value)
+				}
+			}
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+	}
 }
 
 func Start(cfg config.Config) error {
@@ -155,19 +167,19 @@ func loadRouteConfig(path string) (*auth.RouteConfig, error) {
 	return &cfg, nil
 }
 
-func forwardAuth(c *gin.Context, authEngine *gin.Engine) (string, error) {
+func forwardAuth(c *gin.Context, authEngine *gin.Engine) (string, http.Header, error) {
 	forwardedUri := c.GetHeader(HeaderForwardedURI)
 	forwardedMethod := c.GetHeader(HeaderForwardedMethod)
 	forwardedHost := c.GetHeader(HeaderForwardedHost)
 	if forwardedUri == "" || forwardedMethod == "" || forwardedHost == "" {
-		return "", errors.New("missing auth headers")
+		return "", nil, errors.New("missing auth headers")
 	}
 	lw := zlog.Logger.WithValues("method", forwardedMethod, "host", forwardedHost, "uri", forwardedUri)
 	lw.V(1).Info("forward auth")
 
 	req, err := http.NewRequestWithContext(c, forwardedMethod, forwardedUri, nil)
 	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
+		return "", nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.RemoteAddr = c.Request.RemoteAddr
 
@@ -193,9 +205,14 @@ func forwardAuth(c *gin.Context, authEngine *gin.Engine) (string, error) {
 	if w.Code != http.StatusOK {
 		lw.V(1).Info("forward auth rejected", "code", w.Code)
 		if w.Code == http.StatusUnauthorized {
-			return "", fmt.Errorf("%w: %s", ErrUnauthorized, w.Body.String())
+			resHeaders := make(http.Header)
+			hv := w.Header().Values(HeaderWWWAuthenticate)
+			if len(hv) > 0 {
+				resHeaders.Add(HeaderWWWAuthenticate, hv[0])
+			}
+			return "", resHeaders, fmt.Errorf("%w: %s", ErrUnauthorized, w.Body.String())
 		}
-		return "", errors.New(w.Body.String())
+		return "", nil, errors.New(w.Body.String())
 	}
-	return w.Body.String(), nil
+	return w.Body.String(), nil, nil
 }

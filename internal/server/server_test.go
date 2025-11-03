@@ -31,9 +31,10 @@ func Test_forwardAuth_MissingHeaders(t *testing.T) {
 	// attach a request (no forwarded header set)
 	c.Request = httptest.NewRequest(http.MethodGet, "/v1/auth", nil)
 
-	_, err := forwardAuth(c, authEngine)
+	_, headers, err := forwardAuth(c, authEngine)
 	require.Error(t, err)
 	assert.Equal(t, "missing auth headers", err.Error())
+	require.Empty(t, headers)
 }
 
 func Test_forwardAuth_HappyPath_StripsForwardedHeaders_SetsMethodAndURI(t *testing.T) {
@@ -67,9 +68,10 @@ func Test_forwardAuth_HappyPath_StripsForwardedHeaders_SetsMethodAndURI(t *testi
 	req.Header.Set("X-Custom", "abc")
 	c.Request = req
 
-	body, err := forwardAuth(c, authEngine)
+	body, headers, err := forwardAuth(c, authEngine)
 	require.NoError(t, err)
 	assert.Equal(t, "allowed", body)
+	require.Empty(t, headers)
 
 	assert.Equal(t, http.MethodPost, seen.method)
 	assert.Equal(t, "/target/path?q=1", seen.uri)
@@ -148,9 +150,10 @@ func Test_forwardAuth_RejectsWhenAuthEngineReturnsNonOK(t *testing.T) {
 	req.Header.Set(HeaderForwardedURI, "/deny")
 	c.Request = req
 
-	_, err := forwardAuth(c, authEngine)
+	_, headers, err := forwardAuth(c, authEngine)
 	require.Error(t, err)
 	assert.Equal(t, "is forbidden", err.Error())
+	require.Empty(t, headers)
 }
 
 func Test_buildEngine_TestEndpoints(t *testing.T) {
@@ -228,6 +231,7 @@ func Test_buildEngine_JWTNoneMode(t *testing.T) {
 		engine.ServeHTTP(w, req)
 
 		require.Equal(t, http.StatusUnauthorized, w.Code)
+		require.Equal(t, `Bearer realm="https://issuer.example.internal", error="invalid_token"`, w.Result().Header.Get(HeaderWWWAuthenticate))
 	})
 
 	t.Run("with invalid Bearer token -> returns 401 Unauthorized", func(t *testing.T) {
@@ -247,5 +251,6 @@ func Test_buildEngine_JWTNoneMode(t *testing.T) {
 		engine.ServeHTTP(w, req)
 
 		require.Equal(t, http.StatusUnauthorized, w.Code)
+		require.Equal(t, `Bearer realm="https://issuer.example.internal", error="invalid_token"`, w.Result().Header.Get(HeaderWWWAuthenticate))
 	})
 }
