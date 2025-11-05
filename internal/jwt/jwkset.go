@@ -5,14 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
+	tlsclient "github.com/grepplabs/cert-source/tls/client"
+	tlsclientconfig "github.com/grepplabs/cert-source/tls/client/config"
 	"github.com/grepplabs/loggo/zlog"
 	"github.com/lestrrat-go/httprc/v3"
 	"github.com/lestrrat-go/httprc/v3/tracesink"
 	"github.com/lestrrat-go/jwx/v3/jwk"
+	slogzap "github.com/samber/slog-zap/v2"
 
 	"github.com/grepplabs/casbin-traefik-forward-auth/internal/config"
 )
@@ -35,11 +39,17 @@ func isFileSet(config *config.JWTConfig) bool {
 }
 
 func newHttpJWKSet(ctx context.Context, config config.JWTConfig) (jwk.Set, error) {
+	clientOptions := []httprc.NewClientOption{httprc.WithTraceSink(tracesink.NewSlog(newZapSlogLogger()))}
+	if config.TLS.Enable && strings.HasPrefix(config.JWKSURL, "https://") {
+		httpClient, err := newHTTPClientForJWKS(config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create http client for jwks: %w", err)
+		}
+		clientOptions = append(clientOptions, httprc.WithHTTPClient(httpClient))
+	}
 	c, err := jwk.NewCache(
 		ctx,
-		httprc.NewClient(
-			httprc.WithTraceSink(tracesink.NewSlog(newZapSlogLogger())),
-		),
+		httprc.NewClient(clientOptions...),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create jwk set: %w", err)
@@ -64,6 +74,17 @@ func newHttpJWKSet(ctx context.Context, config config.JWTConfig) (jwk.Set, error
 		return nil, fmt.Errorf("cache jwk set: %w", err)
 	}
 	return cached, nil
+}
+
+func newHTTPClientForJWKS(cfg config.JWTConfig) (*http.Client, error) {
+	sl := slog.New(slogzap.Option{Logger: zlog.LogSink}.NewZapHandler())
+	tlsClientConfigFunc, err := tlsclientconfig.GetTLSClientConfigFunc(sl, &cfg.TLS)
+	if err != nil {
+		return nil, fmt.Errorf("create tls client config: %w", err)
+	}
+	transport := tlsclient.NewDefaultRoundTripper(tlsclient.WithClientTLSConfig(tlsClientConfigFunc()))
+	client := &http.Client{Transport: transport}
+	return client, nil
 }
 
 func waitForJWKRefresh(ctx context.Context, cache *jwk.Cache, config config.JWTConfig) error {
