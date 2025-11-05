@@ -3,7 +3,7 @@ module github.com/grepplabs/casbin-traefik-forward-auth
 go 1.24.7
 
 require (
-	github.com/casbin/casbin/v2 v2.131.0
+	github.com/casbin/casbin/v2 v2.132.0
 	github.com/expr-lang/expr v1.17.6
 	github.com/gin-contrib/zap v1.1.5
 	github.com/gin-gonic/gin v1.11.0
