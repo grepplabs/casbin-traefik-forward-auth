@@ -150,9 +150,38 @@ func TestRouteConfig_Validate(t *testing.T) {
 		return &RouteConfig{Routes: routes}
 	}
 
-	t.Run("happy path minimal", func(t *testing.T) {
+	t.Run("happy path minimal - RelativePaths", func(t *testing.T) {
 		cfg := rc(route("GET", nil, nil))
 		require.NoError(t, cfg.Validate())
+	})
+
+	t.Run("happy path minimal - RelativePath", func(t *testing.T) {
+		r := Route{
+			HttpMethod:   "GET",
+			RelativePath: "/ok",
+		}
+		cfg := rc(r)
+		require.NoError(t, cfg.Validate())
+	})
+
+	t.Run("happy path minimal - HttpMethods", func(t *testing.T) {
+		r := Route{
+			HttpMethods:  []string{"GET"},
+			RelativePath: "/ok",
+		}
+		cfg := rc(r)
+		require.NoError(t, cfg.Validate())
+	})
+
+	t.Run("happy path minimal - bad HttpMethods", func(t *testing.T) {
+		r := Route{
+			HttpMethods:  []string{"GET", "BAD"},
+			RelativePath: "/ok",
+		}
+		cfg := rc(r)
+		err := cfg.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "Routes[0].HttpMethods[1]: must be one of [GET HEAD POST PUT PATCH DELETE CONNECT OPTIONS TRACE ANY]; got BAD")
 	})
 
 	t.Run("invalid http method -> oneof error surfaced", func(t *testing.T) {
@@ -240,9 +269,10 @@ func TestRuleConfig_Validate_AllErrorsTogether(t *testing.T) {
 func TestRouteConfig_Validate_RuleErrorIsWrappedWithIndices(t *testing.T) {
 	cfg := &RouteConfig{
 		Routes: []Route{
-			{HttpMethod: "GET"},
+			{HttpMethod: "GET", RelativePath: "/user/:id"},
 			{
-				HttpMethod: "POST",
+				HttpMethod:   "POST",
+				RelativePath: "/user/:id",
 				Rules: []RuleConfig{
 					{ // ok
 						Format:     "%s",
@@ -281,7 +311,7 @@ func TestParamFunctionTag_ChecksAgainstBuiltinCaseInsensitively(t *testing.T) {
 	cfg := &RouteConfig{
 		Routes: []Route{
 			{
-				HttpMethod: "GET",
+				HttpMethod: "GET", RelativePath: "/user/:id",
 				Params: []ParamConfig{
 					{Name: "x", Source: ParamSourceQuery, Function: "B64DEC"},
 				},
@@ -296,7 +326,7 @@ func TestRouteConfig_Validate_RulesPassThrough(t *testing.T) {
 	cfg := &RouteConfig{
 		Routes: []Route{
 			{
-				HttpMethod: "PUT",
+				HttpMethod: "PUT", RelativePath: "/user/:id",
 				Rules: []RuleConfig{
 					{Format: "%s-%s", ParamNames: []string{"a", "b"}},
 				},
@@ -310,7 +340,7 @@ func TestRouteConfig_Validate_ParamsAndRulesTogether(t *testing.T) {
 	cfg := &RouteConfig{
 		Routes: []Route{
 			{
-				HttpMethod: "DELETE",
+				HttpMethod: "DELETE", RelativePath: "/user/:id",
 				Params: []ParamConfig{
 					{Name: "Host", Source: ParamSourceHeader},
 				},
@@ -327,7 +357,7 @@ func TestRouteConfig_Validate_ParamRegex_EmptyPattern(t *testing.T) {
 	cfg := &RouteConfig{
 		Routes: []Route{
 			{
-				HttpMethod: "GET",
+				HttpMethod: "GET", RelativePaths: []string{"/user/:id"},
 				Params: []ParamConfig{
 					{
 						Name:     "projectId",
@@ -353,7 +383,7 @@ func TestRouteConfig_Validate_ParamRegex_InvalidPattern(t *testing.T) {
 	cfg := &RouteConfig{
 		Routes: []Route{
 			{
-				HttpMethod: "POST",
+				HttpMethod: "POST", RelativePath: "/user/:id",
 				Params: []ParamConfig{
 					{
 						Name:     "subscriptionId",
@@ -379,7 +409,7 @@ func TestRouteConfig_Validate_ParamRegex_HappyPath(t *testing.T) {
 	cfg := &RouteConfig{
 		Routes: []Route{
 			{
-				HttpMethod: "GET",
+				HttpMethod: "GET", RelativePath: "/user/:id",
 				Params: []ParamConfig{
 					{
 						Name:     "projectId",

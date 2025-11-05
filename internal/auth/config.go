@@ -54,16 +54,23 @@ type RuleCase struct {
 	ParamNames []string `json:"paramNames,omitempty" yaml:"paramNames,omitempty" binding:"dive,required"`
 }
 type Route struct {
-	HttpMethod    string        `json:"httpMethod" yaml:"httpMethod" binding:"required,oneof=GET HEAD POST PUT PATCH DELETE CONNECT OPTIONS TRACE ANY"`
-	RelativePaths []string      `json:"relativePaths" yaml:"relativePaths"`                      // e.g. "/user/:id"
+	HttpMethod    string        `json:"httpMethod,omitempty" yaml:"httpMethod,omitempty" binding:"omitempty,oneof=GET HEAD POST PUT PATCH DELETE CONNECT OPTIONS TRACE ANY"`
+	HttpMethods   []string      `json:"httpMethods,omitempty" yaml:"httpMethods,omitempty" binding:"omitempty,min=1,dive,oneof=GET HEAD POST PUT PATCH DELETE CONNECT OPTIONS TRACE ANY"`
+	RelativePath  string        `json:"relativePath,omitempty" yaml:"relativePath,omitempty"`
+	RelativePaths []string      `json:"relativePaths,omitempty" yaml:"relativePaths,omitempty"`  // e.g. "/user/:id"
 	Params        []ParamConfig `json:"params,omitempty" yaml:"params,omitempty" binding:"dive"` // params to extract
 	Rules         []RuleConfig  `json:"rules,omitempty" yaml:"rules,omitempty" binding:"dive"`   // cabin arguments (if missing -> use params)
+}
+
+func (rc *Route) Validate() error {
+	return nil
 }
 
 type RouteConfig struct {
 	Routes []Route `json:"routes" yaml:"routes" binding:"dive,required"`
 }
 
+// nolint:cyclop
 func (rc *RouteConfig) Validate() error {
 	v := validator.New(validator.WithRequiredStructEnabled())
 	v.SetTagName("binding")
@@ -83,6 +90,12 @@ func (rc *RouteConfig) Validate() error {
 		return fmt.Errorf("validation error: %s", describeValidationErrors(err))
 	}
 	for ri := range rc.Routes {
+		if rc.Routes[ri].HttpMethod == "" && len(rc.Routes[ri].HttpMethods) == 0 {
+			return fmt.Errorf("routes[%d] HTTP method is required", ri)
+		}
+		if rc.Routes[ri].RelativePath == "" && len(rc.Routes[ri].RelativePaths) == 0 {
+			return fmt.Errorf("routes[%d] RelativePath is required", ri)
+		}
 		// validate route params (and warm regex cache)
 		for pi, p := range rc.Routes[ri].Params {
 			if err := p.Validate(); err != nil {

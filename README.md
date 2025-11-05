@@ -170,7 +170,9 @@ routes, each defining how incoming requests should be authorized.
 ### Route Fields
 
 * `httpMethod` (string): The HTTP method to match (e.g., `GET`, `POST`, `ANY`).
-* `relativePath` (array of strings): The URL path to match. Can include path parameters (e.g., `/user/:id`).
+* `httpMethods` (array of strings): A list of HTTP methods to match.
+* `relativePath` (string): The URL path to match. Can include path parameters (e.g., `/user/:id`).
+* `relativePaths` (array of strings): A list of URL paths to match.
 * `params` (array of objects): A list of parameters to extract from the incoming request.
     * `name` (string): The name of the parameter.
     * `source` (string): The source of the parameter. Possible values:

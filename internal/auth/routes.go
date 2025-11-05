@@ -22,18 +22,31 @@ func SetupRoutes(r *gin.Engine, routes []Route, enforcer *casbin.SyncedEnforcer)
 
 	for _, route := range routes {
 		handler := makeHandler(route, enforcer)
-		method := strings.ToUpper(route.HttpMethod)
 
-		for _, relativePath := range route.RelativePaths {
-			zlog.Infof("add auth route %s %s", method, relativePath)
-			if method == HttpMethodAny {
-				r.Any(relativePath, handler)
-			} else {
-				r.Handle(route.HttpMethod, relativePath, handler)
+		httpMethods := mergeStringSlice(route.HttpMethods, route.HttpMethod)
+		relativePaths := mergeStringSlice(route.RelativePaths, route.RelativePath)
+
+		for _, relativePath := range relativePaths {
+			for _, method := range httpMethods {
+				zlog.Infof("add auth route %s %s", method, relativePath)
+				if method == HttpMethodAny {
+					r.Any(relativePath, handler)
+				} else {
+					r.Handle(method, relativePath, handler)
+				}
 			}
 		}
 	}
 	return r
+}
+
+func mergeStringSlice(base []string, extra string) []string {
+	result := make([]string, 0)
+	result = append(result, base...)
+	if extra == "" {
+		return result
+	}
+	return append(result, extra)
 }
 
 func makeHandler(route Route, enforcer *casbin.SyncedEnforcer) gin.HandlerFunc {
