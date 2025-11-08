@@ -1,0 +1,59 @@
+suite: ServiceMonitor
+templates:
+  - servicemonitor.yaml
+
+release:
+  name: casbin-traefik-forward-auth
+  namespace: casbin-auth
+
+tests:
+  - it: should not render when serviceMonitor is disabled
+    template: servicemonitor.yaml
+    asserts:
+      - notExists:
+          path: kind
+
+  - it: should render ServiceMonitor with defaults
+    template: servicemonitor.yaml
+    set:
+      serviceMonitor:
+        enabled: true
+    asserts:
+      - isKind:
+          of: ServiceMonitor
+      - equal:
+          path: metadata.name
+          value: casbin-traefik-forward-auth
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/name"]
+          value: casbin-traefik-forward-auth
+      - equal:
+          path: spec.endpoints[0].port
+          value: admin
+      - equal:
+          path: spec.endpoints[0].path
+          value: /metrics
+      - equal:
+          path: spec.endpoints[0].interval
+          value: 15s
+      - equal:
+          path: spec.endpoints[0].scrapeTimeout
+          value: 10s
+
+  - it: should render ServiceMonitor with extra labels and namespaceSelector
+    template: servicemonitor.yaml
+    set:
+      serviceMonitor:
+        enabled: true
+        namespace: monitoring
+        additionalLabels:
+          release: prometheus
+    asserts:
+      - isKind:
+          of: ServiceMonitor
+      - equal:
+          path: metadata.labels.release
+          value: prometheus
+      - equal:
+          path: spec.namespaceSelector.matchNames[0]
+          value: monitoring

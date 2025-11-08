@@ -1,0 +1,32 @@
+suite: ConfigMap config
+templates:
+  - configmap-config.yaml
+
+release:
+  name: casbin-traefik-forward-auth
+  namespace: casbin-auth
+
+tests:
+  - it: should render custom authRouteConfig data
+    template: configmap-config.yaml
+    set:
+      application:
+        authRouteConfig:
+          routes:
+            - path: /admin
+              roles:
+                - admin
+            - path: /public
+              roles:
+                - guest
+    asserts:
+      - equal:
+          path: data["auth-route-config.yaml"]
+          value: |
+            routes:
+            - path: /admin
+              roles:
+              - admin
+            - path: /public
+              roles:
+              - guest

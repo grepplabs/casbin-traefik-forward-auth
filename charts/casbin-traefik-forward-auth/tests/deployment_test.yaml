@@ -1,0 +1,291 @@
+suite: Deployment
+templates:
+  - deployment.yaml
+  - configmap-config.yaml
+  - configmap-env.yaml
+
+release:
+  name: casbin-traefik-forward-auth
+  namespace: casbin-auth
+
+tests:
+  - it: should render a Deployment
+    template: deployment.yaml
+    asserts:
+      - isKind:
+          of: Deployment
+
+  - it: should use default values from values.yaml
+    template: deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          any: true
+          content: "--server-addr=:8080"
+      - contains:
+          path: spec.template.spec.containers[0].args
+          any: true
+          content: "--server-admin-port=8081"
+      - contains:
+          path: spec.template.spec.containers[0].args
+          any: true
+          content: "--casbin-adapter-kube-config-namespace=casbin-auth"
+
+  - it: should set replicas from .Values.replicaCount when autoscaling disabled
+    template: deployment.yaml
+    set:
+      autoscaling:
+        enabled: false
+      replicaCount: 2
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 2
+
+  - it: should not set replicas when autoscaling enabled
+    template: deployment.yaml
+    set:
+      autoscaling:
+        enabled: true
+    asserts:
+      - notExists:
+          path: spec.replicas
+
+  - it: should mount config configmap and include configMapRef for env
+    template: deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          any: true
+          content:
+            name: config
+            configMap:
+              name: "casbin-traefik-forward-auth-config"
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          any: true
+          content:
+            name: config
+            mountPath: /app/config/auth-route-config.yaml
+            subPath: auth-route-config.yaml
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          any: true
+          content:
+            configMapRef:
+              name: "casbin-traefik-forward-auth-env"
+              optional: true
+
+  - it: should override adapter kube namespace when set in values
+    template: deployment.yaml
+    set:
+      application:
+        server:
+          port: 18080
+          adminPort: 18081
+        adapter:
+          kube:
+            namespace: policies
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          any: true
+          content: "--casbin-adapter-kube-config-namespace=policies"
+      - contains:
+          path: spec.template.spec.containers[0].args
+          any: true
+          content: "--server-addr=:18080"
+      - contains:
+          path: spec.template.spec.containers[0].args
+          any: true
+          content: "--server-admin-port=18081"
+
+  - it: should render default liveness and readiness probes
+    template: deployment.yaml
+    asserts:
+      - exists:
+          path: spec.template.spec.containers[0].livenessProbe
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /healthz
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.port
+          value: admin
+      - exists:
+          path: spec.template.spec.containers[0].readinessProbe
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /readyz
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.port
+          value: admin
+
+  - it: should render overridden probes when set
+    template: deployment.yaml
+    set:
+      livenessProbe:
+        httpGet:
+          path: /custom-health
+          port: 8080
+        initialDelaySeconds: 5
+      readinessProbe:
+        httpGet:
+          path: /custom-ready
+          port: 8081
+        periodSeconds: 10
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /custom-health
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.port
+          value: 8080
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.initialDelaySeconds
+          value: 5
+
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /custom-ready
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.port
+          value: 8081
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.periodSeconds
+          value: 10
+
+  - it: should include user-defined secretRef and configMapRef in envFrom
+    template: deployment.yaml
+    set:
+      extraEnvFrom:
+        - secretRef:
+            name: my-extra-secrets
+            optional: true
+        - configMapRef:
+            name: another-config
+            optional: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          any: true
+          content:
+            configMapRef:
+              name: casbin-traefik-forward-auth-env
+              optional: true
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          any: true
+          content:
+            secretRef:
+              name: my-extra-secrets
+              optional: true
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          any: true
+          content:
+            configMapRef:
+              name: another-config
+              optional: true
+
+  - it: should include user-defined extraVolumes
+    template: deployment.yaml
+    set:
+      extraVolumes:
+        - name: foo
+          secret:
+            secretName: mysecret
+            optional: false
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          any: true
+          content:
+            name: config
+            configMap:
+              name: casbin-traefik-forward-auth-config
+      - contains:
+          path: spec.template.spec.volumes
+          any: true
+          content:
+            name: foo
+            secret:
+              secretName: mysecret
+              optional: false
+
+  - it: should include user-defined extraVolumeMounts
+    template: deployment.yaml
+    set:
+      extraVolumeMounts:
+        - name: foo
+          mountPath: "/etc/foo"
+          readOnly: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          any: true
+          content:
+            name: config
+            mountPath: /app/config/auth-route-config.yaml
+            subPath: auth-route-config.yaml
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          any: true
+          content:
+            name: foo
+            mountPath: "/etc/foo"
+            readOnly: true
+
+  - it: should add podLabels to the pod template
+    template: deployment.yaml
+    set:
+      podLabels:
+        foo: bar
+        tier: frontend
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/name"]
+          value: casbin-traefik-forward-auth
+      - equal:
+          path: spec.template.metadata.labels.foo
+          value: bar
+      - equal:
+          path: spec.template.metadata.labels.tier
+          value: frontend
+
+  - it: should add podAnnotations to the pod template
+    template: deployment.yaml
+    set:
+      podAnnotations:
+        backup.velero.io/backup: "true"
+        example.com/trace: "enabled"
+    asserts:
+      - exists:
+          path: spec.template.metadata.annotations["checksum/configmap-config"]
+      - equal:
+          path: spec.template.metadata.annotations["backup.velero.io/backup"]
+          value: "true"
+      - equal:
+          path: spec.template.metadata.annotations["example.com/trace"]
+          value: "enabled"
+
+  - it: should render checksum for env configmap when application.env is set
+    template: deployment.yaml
+    set:
+      application:
+        env:
+          FOO: bar
+    asserts:
+      - exists:
+          path: spec.template.metadata.annotations["checksum/configmap-env"]
+
+  - it: should render imagePullSecrets when set
+    template: deployment.yaml
+    set:
+      imagePullSecrets:
+        - name: my-registry-creds
+    asserts:
+      - contains:
+          path: spec.template.spec.imagePullSecrets
+          any: true
+          content:
+            name: my-registry-creds

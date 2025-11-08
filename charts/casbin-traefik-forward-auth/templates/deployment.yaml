@@ -49,9 +49,14 @@ spec:
           args:
             - --auth-route-config-path=/app/config/auth-route-config.yaml
             - --casbin-adapter-kube-config-namespace={{ $policyNs }}
+            - --server-addr={{ printf ":%d" (int .Values.application.server.port) }}
+            - --server-admin-port={{ .Values.application.server.adminPort }}
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: {{ .Values.application.server.port }}
+              protocol: TCP
+            - name: admin
+              containerPort: {{ .Values.application.server.adminPort }}
               protocol: TCP
           env:
             - name: POD_NAMESPACE
@@ -63,7 +68,7 @@ spec:
                 name: {{ include "casbin-traefik-forward-auth.fullname" . }}-env
                 optional: true
             {{- with .Values.extraEnvFrom }}
-            {{ tpl (toYaml .) . | nindent 6 }}
+            {{ tpl (toYaml .) . | nindent 12 }}
             {{- end }}
           {{- with .Values.livenessProbe }}
           livenessProbe:
@@ -82,14 +87,14 @@ spec:
               mountPath: /app/config/auth-route-config.yaml
               subPath: auth-route-config.yaml
             {{- with .Values.extraVolumeMounts }}
-            {{ tpl (toYaml .) . | nindent 6 }}
+            {{ tpl (toYaml .) . | nindent 12 }}
             {{- end }}
       volumes:
         - name: config
           configMap:
             name: {{ include "casbin-traefik-forward-auth.fullname" . }}-config
         {{- with .Values.extraVolumes }}
-        {{ tpl (toYaml .) . | nindent 2 }}
+        {{ tpl (toYaml .) . | nindent 8 }}
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

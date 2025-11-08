@@ -26,7 +26,7 @@ p, iam::123456789012:sa/9e4fdb1c-3345-4c07-98d9-73b993c9dd42, pubsub:eu-central-
 
 	gin.SetMode(gin.TestMode)
 	cfg := newTestFileAdapterConfig(t, "rbac_model.conf", policies, routes)
-	engine, closers, err := buildEngine(cfg)
+	engine, closers, err := buildEngine(newRegistry(), cfg)
 	require.NoError(t, err)
 	defer closers.Close()
 
@@ -104,7 +104,7 @@ func TestAuth_RBAC_PubSub_NoPolicies_Forbidden(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	cfg := newTestFileAdapterConfig(t, "rbac_model.conf", "", routes)
-	engine, closers, err := buildEngine(cfg)
+	engine, closers, err := buildEngine(newRegistry(), cfg)
 	require.NoError(t, err)
 	defer closers.Close()
 
@@ -147,7 +147,7 @@ p, cathy, /cathy_data, (GET)|(POST)
 
 	gin.SetMode(gin.TestMode)
 	cfg := newTestFileAdapterConfig(t, "keymatch_model.conf", policies, routes)
-	engine, closers, err := buildEngine(cfg)
+	engine, closers, err := buildEngine(newRegistry(), cfg)
 	require.NoError(t, err)
 	defer closers.Close()
 

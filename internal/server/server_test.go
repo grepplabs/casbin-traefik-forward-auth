@@ -160,7 +160,7 @@ func Test_buildEngine_TestEndpoints(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	cfg := newTestFileAdapterConfig(t, "rbac_model.conf", "", "")
-	engine, closers, err := buildEngine(cfg)
+	engine, closers, err := buildEngine(newRegistry(), cfg)
 	require.NoError(t, err)
 	defer closers.Close()
 
@@ -215,7 +215,7 @@ func Test_buildEngine_JWTNoneMode(t *testing.T) {
 	cfg := newTestFileAdapterConfig(t, "rbac_model.conf", "", "")
 	cfg.Auth.JWTConfig = jwtCfg
 
-	engine, closers, err := buildEngine(cfg)
+	engine, closers, err := buildEngine(newRegistry(), cfg)
 	require.NoError(t, err)
 	defer closers.Close()
 

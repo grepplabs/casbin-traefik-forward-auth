@@ -33,6 +33,10 @@ securityContext: {}
 service:
   type: ClusterIP
   port: 80
+  admin:
+    type: ClusterIP
+    port: 8081
+
 
 ingress:
   enabled: false
@@ -103,11 +107,11 @@ resources: {}
 livenessProbe:
   httpGet:
     path: /healthz
-    port: http
+    port: admin
 readinessProbe:
   httpGet:
     path: /readyz
-    port: http
+    port: admin
 
 # This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
 autoscaling:
@@ -156,6 +160,9 @@ serviceMonitor:
   metricRelabelings: []
 
 application:
+  server:
+    port: 8080
+    adminPort: 8081
   env:
   authRouteConfig: {}
   adapter:

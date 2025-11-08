@@ -4,6 +4,9 @@ image:
   repository: local/casbin-traefik-forward-auth
   tag: latest
 
+serviceMonitor:
+  enabled: true
+
 application:
   env:
     LOG_FORMAT: "text"

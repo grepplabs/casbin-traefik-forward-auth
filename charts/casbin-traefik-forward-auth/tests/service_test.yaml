@@ -1,0 +1,122 @@
+suite: Service
+templates:
+  - service.yaml
+
+release:
+  name: casbin-traefik-forward-auth
+  namespace: casbin-auth
+
+tests:
+  - it: should render the main http service
+    template: service.yaml
+    documentIndex: 0
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: casbin-traefik-forward-auth
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.ports[0].port
+          value: 80
+      - equal:
+          path: spec.ports[0].name
+          value: http
+      - equal:
+          path: spec.ports[0].targetPort
+          value: http
+      - equal:
+          path: spec.selector["app.kubernetes.io/name"]
+          value: casbin-traefik-forward-auth
+
+  - it: should render the admin service
+    template: service.yaml
+    documentIndex: 1
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: casbin-traefik-forward-auth-admin
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.ports[0].port
+          value: 8081
+      - equal:
+          path: spec.ports[0].name
+          value: admin
+      - equal:
+          path: spec.ports[0].targetPort
+          value: admin
+      - equal:
+          path: spec.selector["app.kubernetes.io/name"]
+          value: casbin-traefik-forward-auth
+
+  - it: should render the main LoadBalancer http service
+    template: service.yaml
+    documentIndex: 0
+    set:
+      service:
+        type: LoadBalancer
+        port: 18080
+        admin:
+          type: NodePort
+          port: 18081
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: casbin-traefik-forward-auth
+      - equal:
+          path: spec.type
+          value: LoadBalancer
+      - equal:
+          path: spec.ports[0].port
+          value: 18080
+      - equal:
+          path: spec.ports[0].name
+          value: http
+      - equal:
+          path: spec.ports[0].targetPort
+          value: http
+      - equal:
+          path: spec.selector["app.kubernetes.io/name"]
+          value: casbin-traefik-forward-auth
+
+  - it: should render the admin NodePort service
+    template: service.yaml
+    documentIndex: 1
+    set:
+      service:
+        type: LoadBalancer
+        port: 18080
+        admin:
+          type: NodePort
+          port: 18081
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: casbin-traefik-forward-auth-admin
+      - equal:
+          path: spec.type
+          value: NodePort
+      - equal:
+          path: spec.ports[0].port
+          value: 18081
+      - equal:
+          path: spec.ports[0].name
+          value: admin
+      - equal:
+          path: spec.ports[0].targetPort
+          value: admin
+      - equal:
+          path: spec.selector["app.kubernetes.io/name"]
+          value: casbin-traefik-forward-auth

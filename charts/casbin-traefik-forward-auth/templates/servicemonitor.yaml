@@ -13,7 +13,7 @@ spec:
     matchLabels:
       {{- include "casbin-traefik-forward-auth.selectorLabels" . | nindent 6 }}
   endpoints:
-    - port: http
+    - port: admin
       interval: {{ .Values.serviceMonitor.interval }}
       scrapeTimeout: {{ .Values.serviceMonitor.scrapeTimeout }}
       path: /metrics

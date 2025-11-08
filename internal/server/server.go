@@ -11,6 +11,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"runtime/debug"
+	"strconv"
+	"strings"
 	"time"
 
 	ginzap "github.com/gin-contrib/zap"
@@ -20,6 +22,7 @@ import (
 	"github.com/grepplabs/casbin-traefik-forward-auth/internal/metrics"
 	tlsserverconfig "github.com/grepplabs/cert-source/tls/server/config"
 	"github.com/grepplabs/loggo/zlog"
+	"github.com/oklog/run"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	slogzap "github.com/samber/slog-zap/v2"
@@ -43,21 +46,15 @@ var (
 	ErrUnauthorized = errors.New("unauthorized")
 )
 
-// nolint: funlen
-func buildEngine(cfg config.Config) (*gin.Engine, Closers, error) {
+// nolint: funlen, cyclop
+func buildEngine(registry *prometheus.Registry, cfg config.Config) (*gin.Engine, Closers, error) {
 	closers := make(Closers, 0)
 
 	gin.SetMode(gin.ReleaseMode)
 
-	registerer := prometheus.NewRegistry()
-	registerer.MustRegister(
-		collectors.NewGoCollector(),
-		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-	)
-
 	mainMetricsMW, err := metrics.NewMiddlewareWithConfig(metrics.MiddlewareConfig{
 		Namespace:   "main",
-		Registerer:  registerer,
+		Registerer:  registry,
 		IncludeHost: cfg.Metrics.IncludeHost,
 	})
 	if err != nil {
@@ -65,7 +62,7 @@ func buildEngine(cfg config.Config) (*gin.Engine, Closers, error) {
 	}
 	authMetricsMW, err := metrics.NewMiddlewareWithConfig(metrics.MiddlewareConfig{
 		Namespace:   "auth",
-		Registerer:  registerer,
+		Registerer:  registry,
 		IncludeHost: cfg.Metrics.IncludeHost,
 	})
 	if err != nil {
@@ -121,6 +118,59 @@ func buildEngine(cfg config.Config) (*gin.Engine, Closers, error) {
 	auth.SetupRoutes(authEngine, routeConfig.Routes, enforcer.SyncedEnforcer)
 
 	engine.GET("/v1/auth", authHandler(authEngine))
+
+	if cfg.Server.AdminPort == 0 {
+		addAdminEndpoints(registry, engine)
+	}
+	zlog.Infof("starting enforcer")
+	err = enforcer.Start(context.Background())
+	if err != nil {
+		return nil, closers, fmt.Errorf("error starting enforcer: %w", err)
+	}
+	return engine, closers, nil
+}
+
+func newRegistry() *prometheus.Registry {
+	registerer := prometheus.NewRegistry()
+	registerer.MustRegister(
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+	)
+	return registerer
+}
+
+func buildAdminEngine(registry *prometheus.Registry) *gin.Engine {
+	engineLogger := zlog.LogSink.WithOptions(zap.WithCaller(false)).With(zap.String("engine", "admin"))
+	engine := gin.New()
+	engine.Use(ginzap.GinzapWithConfig(engineLogger, &ginzap.Config{
+		TimeFormat: time.RFC3339,
+		SkipPaths:  []string{"/healthz", "/readyz", "/metrics"},
+	}))
+	engine.Use(ginzap.RecoveryWithZap(engineLogger, true))
+	addAdminEndpoints(registry, engine)
+	return engine
+}
+
+func getAdminAddr(cfg config.Config) (string, error) {
+	addr := cfg.Server.Addr
+	if addr == "" {
+		return "", errors.New("server address cannot be empty")
+	}
+
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		// handle cases like ":8080" or invalid formats
+		if strings.HasPrefix(addr, ":") {
+			host = ""
+		} else {
+			return "", fmt.Errorf("invalid server address %q: %w", addr, err)
+		}
+	}
+	adminAddr := net.JoinHostPort(host, strconv.Itoa(cfg.Server.AdminPort))
+	return adminAddr, nil
+}
+
+func addAdminEndpoints(registry *prometheus.Registry, engine *gin.Engine) {
 	engine.GET("/healthz", func(c *gin.Context) {
 		c.Status(http.StatusOK)
 	})
@@ -128,15 +178,8 @@ func buildEngine(cfg config.Config) (*gin.Engine, Closers, error) {
 		c.Status(http.StatusOK)
 	})
 	engine.GET("/metrics", metrics.NewHandlerWithConfig(metrics.HandlerConfig{
-		Gatherer: registerer,
+		Gatherer: registry,
 	}))
-
-	zlog.Infof("starting enforcer")
-	err = enforcer.Start(context.Background())
-	if err != nil {
-		return nil, closers, fmt.Errorf("error starting enforcer: %w", err)
-	}
-	return engine, closers, nil
 }
 
 func authHandler(authEngine *gin.Engine) gin.HandlerFunc {
@@ -162,31 +205,50 @@ func authHandler(authEngine *gin.Engine) gin.HandlerFunc {
 }
 
 func Start(cfg config.Config) error {
-	engine, closers, err := buildEngine(cfg)
+	registry := newRegistry()
+	engine, closers, err := buildEngine(registry, cfg)
 	defer func() { _ = closers.Close() }()
 	if err != nil {
 		return fmt.Errorf("error building engine: %w", err)
 	}
+	var group run.Group
+	group.Add(func() error {
+		if cfg.Server.TLS.Enable {
+			sl := slog.New(slogzap.Option{Logger: zlog.LogSink}.NewZapHandler())
+			tlsConfig, err := tlsserverconfig.GetServerTLSConfig(sl, &cfg.Server.TLS)
+			if err != nil {
+				return fmt.Errorf("error creating TLS server config: %w", err)
+			}
+			//nolint:noctx
+			ln, err := net.Listen("tcp", cfg.Server.Addr)
+			if err != nil {
+				return fmt.Errorf("error listening on %s: %w", cfg.Server.Addr, err)
+			}
+			tlsLn := tls.NewListener(ln, tlsConfig)
 
-	if cfg.Server.TLS.Enable {
-		sl := slog.New(slogzap.Option{Logger: zlog.LogSink}.NewZapHandler())
-		tlsConfig, err := tlsserverconfig.GetServerTLSConfig(sl, &cfg.Server.TLS)
-		if err != nil {
-			return fmt.Errorf("error creating TLS server config: %w", err)
+			zlog.Infof("starting TLS server on %s (version: %s)", cfg.Server.Addr, getVersion())
+			return engine.RunListener(tlsLn)
+		} else {
+			zlog.Infof("starting server on %s (version: %s)", cfg.Server.Addr, getVersion())
+			return engine.Run(cfg.Server.Addr)
 		}
-		//nolint:noctx
-		ln, err := net.Listen("tcp", cfg.Server.Addr)
-		if err != nil {
-			return fmt.Errorf("error listening on %s: %w", cfg.Server.Addr, err)
-		}
-		tlsLn := tls.NewListener(ln, tlsConfig)
+	}, func(err error) {
+	})
 
-		zlog.Infof("starting TLS server on %s (version: %s)", cfg.Server.Addr, getVersion())
-		return engine.RunListener(tlsLn)
-	} else {
-		zlog.Infof("starting server on %s (version: %s)", cfg.Server.Addr, getVersion())
-		return engine.Run(cfg.Server.Addr)
+	if cfg.Server.AdminPort > 0 {
+		adminAddr, err := getAdminAddr(cfg)
+		if err != nil {
+			return fmt.Errorf("error getting admin address: %w", err)
+		}
+		adminEngine := buildAdminEngine(registry)
+
+		group.Add(func() error {
+			zlog.Infof("starting admin server %s", adminAddr)
+			return adminEngine.Run(adminAddr)
+		}, func(err error) {
+		})
 	}
+	return group.Run()
 }
 
 func getVersion() string {

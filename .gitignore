@@ -42,3 +42,5 @@ dist/
 /casbin-traefik-forward-auth
 /kind-config-casbin-traefik.yaml
 /kubeconfig-casbin-traefik
+.debug
+__snapshot__
