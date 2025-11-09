@@ -1,7 +1,7 @@
 fullnameOverride: casbin-auth-rbac
 
 image:
-  repository: local/casbin-traefik-forward-auth
+  repository: local/casbin-forward-auth
   tag: latest
 
 serviceMonitor:

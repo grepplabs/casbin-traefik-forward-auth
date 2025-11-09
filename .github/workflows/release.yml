@@ -6,7 +6,7 @@ on:
       - "v*.*.*"
 
 env:
-  CHART_DIR: charts/casbin-traefik-forward-auth
+  CHART_DIR: charts/casbin-forward-auth
 
 jobs:
   pre-release-check:

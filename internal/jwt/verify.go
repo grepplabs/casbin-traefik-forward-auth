@@ -8,7 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jws"
 	"github.com/lestrrat-go/jwx/v3/jwt"
 
-	"github.com/grepplabs/casbin-traefik-forward-auth/internal/config"
+	"github.com/grepplabs/casbin-forward-auth/internal/config"
 )
 
 func verifyToken(signedJWT string, cfg *config.JWTConfig, pubSet jwk.Set) (jwt.Token, error) {

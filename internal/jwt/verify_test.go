@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/grepplabs/casbin-traefik-forward-auth/internal/config"
+	"github.com/grepplabs/casbin-forward-auth/internal/config"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/lestrrat-go/jwx/v3/jwt"

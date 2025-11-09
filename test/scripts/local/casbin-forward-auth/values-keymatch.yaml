@@ -1,17 +1,20 @@
-fullnameOverride: casbin-auth
+fullnameOverride: casbin-auth-keymatch
 
 image:
-  repository: local/casbin-traefik-forward-auth
+  repository: local/casbin-forward-auth
   tag: latest
+
+serviceMonitor:
+  enabled: true
 
 application:
   env:
     LOG_FORMAT: "text"
     CASBIN_MODEL: keymatch_model.conf
-    JWT_ENABLED: "true"
-    JWT_JWKS_URL: http://keycloak.keycloak.svc.cluster.local:8080/realms/master/protocol/openid-connect/certs
-    JWT_ISSUER: http://localhost:30082/realms/master
-    JWT_AUDIENCE: account
+    CASBIN_ADAPTER_KUBE_CONFIG_LABELS: "casbin.grepplabs.com/model=keymatch"
+  adapter:
+    kube:
+      namespace:
   authRouteConfig:
     routes:
       - httpMethod: ANY
@@ -19,8 +22,7 @@ application:
           - /*any
         params:
           - name: user
-            source: claim
-            expr: preferred_username
+            source: basicAuthUser
           - name: resource
             source: urlPath
           - name: method

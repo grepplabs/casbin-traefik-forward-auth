@@ -5,5 +5,5 @@ resources:
   - ../traefik
   - ../keycloak
   - ../../../local/casbin-kube
-  - ../casbin-traefik-forward-auth
+  - ../casbin-forward-auth
   - ../dev-tools

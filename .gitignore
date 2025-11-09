@@ -39,7 +39,7 @@ go.work.sum
 # Added by goreleaser init:
 dist/
 
-/casbin-traefik-forward-auth
+/casbin-forward-auth
 /kind-config-casbin-traefik.yaml
 /kubeconfig-casbin-traefik
 .debug

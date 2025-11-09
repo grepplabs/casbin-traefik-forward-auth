@@ -1,7 +1,7 @@
-# Casbin Traefik Forward Auth
+# Casbin Forward Auth
 
-[![Build](https://github.com/grepplabs/casbin-traefik-forward-auth/actions/workflows/build.yml/badge.svg)](https://github.com/grepplabs/casbin-traefik-forward-auth/actions/workflows/build.yml)
-[![Release](https://img.shields.io/github/v/release/grepplabs/casbin-traefik-forward-auth?sort=semver)](https://github.com/grepplabs/casbin-traefik-forward-auth/releases)
+[![Build](https://github.com/grepplabs/casbin-forward-auth/actions/workflows/build.yml/badge.svg)](https://github.com/grepplabs/casbin-forward-auth/actions/workflows/build.yml)
+[![Release](https://img.shields.io/github/v/release/grepplabs/casbin-forward-auth?sort=semver)](https://github.com/grepplabs/casbin-forward-auth/releases)
 
 A ForwardAuth service for [Traefik](https://traefik.io/) with [Casbin-based](https://casbin.org/) authorization.
 
@@ -91,7 +91,7 @@ helm install casbin-kube oci://ghcr.io/grepplabs/helm/casbin-kube:0.0.1
 Install the Casbin Traefik Forward Auth Helm chart:
 
 ```bash
-helm install casbin-auth oci://ghcr.io/grepplabs/helm/casbin-traefik-forward-auth:<char version> -f your-values.yaml
+helm install casbin-auth oci://ghcr.io/grepplabs/helm/casbin-forward-auth:<char version> -f your-values.yaml
 ```
 
 **Create a Traefik `Middleware` (ForwardAuth)**
@@ -311,12 +311,12 @@ The project provides a Helm chart for easy deployment to Kubernetes.
 
 ### Configuration
 
-The following table lists the configurable parameters of the casbin-traefik-forward-auth chart and their default values.
+The following table lists the configurable parameters of the casbin-forward-auth chart and their default values.
 
 | Key                                          | Type   | Default                                                                                       | Description                                                                                                                                                         |
 |----------------------------------------------|--------|-----------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `replicaCount`                               | int    | `1`                                                                                           | Number of replicas for the deployment.                                                                                                                              |
-| `image.repository`                           | string | `ghcr.io/grepplabs/casbin-traefik-forward-auth`                                               | Image repository.                                                                                                                                                   |
+| `image.repository`                           | string | `ghcr.io/grepplabs/casbin-forward-auth`                                               | Image repository.                                                                                                                                                   |
 | `image.pullPolicy`                           | string | `IfNotPresent`                                                                                | Image pull policy.                                                                                                                                                  |
 | `image.tag`                                  | string | `""`                                                                                          | Overrides the image tag whose default is the chart appVersion.                                                                                                      |
 | `imagePullSecrets`                           | list   | `[]`                                                                                          | Secrets to use for pulling images.                                                                                                                                  |

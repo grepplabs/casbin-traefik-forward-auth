@@ -1,4 +1,4 @@
-module github.com/grepplabs/casbin-traefik-forward-auth
+module github.com/grepplabs/casbin-forward-auth
 
 go 1.24.7
 

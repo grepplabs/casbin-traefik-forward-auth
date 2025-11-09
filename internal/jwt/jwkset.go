@@ -18,7 +18,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	slogzap "github.com/samber/slog-zap/v2"
 
-	"github.com/grepplabs/casbin-traefik-forward-auth/internal/config"
+	"github.com/grepplabs/casbin-forward-auth/internal/config"
 )
 
 func newJWKSet(ctx context.Context, config config.JWTConfig) (jwk.Set, error) {

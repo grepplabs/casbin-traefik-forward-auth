@@ -7,9 +7,9 @@ import (
 
 	"github.com/casbin/casbin/v2/model"
 	fileadapter "github.com/casbin/casbin/v2/persist/file-adapter"
+	"github.com/grepplabs/casbin-forward-auth/internal/config"
+	"github.com/grepplabs/casbin-forward-auth/internal/models"
 	casbinkube "github.com/grepplabs/casbin-kube"
-	"github.com/grepplabs/casbin-traefik-forward-auth/internal/config"
-	"github.com/grepplabs/casbin-traefik-forward-auth/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

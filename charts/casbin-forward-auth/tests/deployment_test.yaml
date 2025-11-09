@@ -5,7 +5,7 @@ templates:
   - configmap-env.yaml
 
 release:
-  name: casbin-traefik-forward-auth
+  name: casbin-forward-auth
   namespace: casbin-auth
 
 tests:
@@ -60,7 +60,7 @@ tests:
           content:
             name: config
             configMap:
-              name: "casbin-traefik-forward-auth-config"
+              name: "casbin-forward-auth-config"
       - contains:
           path: spec.template.spec.containers[0].volumeMounts
           any: true
@@ -73,7 +73,7 @@ tests:
           any: true
           content:
             configMapRef:
-              name: "casbin-traefik-forward-auth-env"
+              name: "casbin-forward-auth-env"
               optional: true
 
   - it: should override adapter kube namespace when set in values
@@ -170,7 +170,7 @@ tests:
           any: true
           content:
             configMapRef:
-              name: casbin-traefik-forward-auth-env
+              name: casbin-forward-auth-env
               optional: true
       - contains:
           path: spec.template.spec.containers[0].envFrom
@@ -202,7 +202,7 @@ tests:
           content:
             name: config
             configMap:
-              name: casbin-traefik-forward-auth-config
+              name: casbin-forward-auth-config
       - contains:
           path: spec.template.spec.volumes
           any: true
@@ -244,7 +244,7 @@ tests:
     asserts:
       - equal:
           path: spec.template.metadata.labels["app.kubernetes.io/name"]
-          value: casbin-traefik-forward-auth
+          value: casbin-forward-auth
       - equal:
           path: spec.template.metadata.labels.foo
           value: bar

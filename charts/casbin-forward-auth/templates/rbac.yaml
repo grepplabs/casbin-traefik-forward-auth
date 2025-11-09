@@ -3,16 +3,16 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "casbin-traefik-forward-auth.fullname" . }}-viewer
+  name: {{ include "casbin-forward-auth.fullname" . }}-viewer
   labels:
-    {{- include "casbin-traefik-forward-auth.labels" . | nindent 4 }}
+    {{- include "casbin-forward-auth.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: casbin-rule-viewer-role
 subjects:
   - kind: ServiceAccount
-    name: {{ include "casbin-traefik-forward-auth.serviceAccountName" . }}
+    name: {{ include "casbin-forward-auth.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}
 
 {{- end }}

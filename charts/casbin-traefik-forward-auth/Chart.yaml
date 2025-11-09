@@ -1,6 +1,0 @@
-apiVersion: v2
-name: casbin-traefik-forward-auth
-description: A Helm chart for a casbin-traefik-forward-auth.
-type: application
-version: 0.0.5
-appVersion: "v0.0.5"

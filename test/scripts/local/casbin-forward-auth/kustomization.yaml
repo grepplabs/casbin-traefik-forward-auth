@@ -9,11 +9,11 @@ helmGlobals:
   chartHome: ../../../../charts
 
 helmCharts:
-  - name: casbin-traefik-forward-auth
+  - name: casbin-forward-auth
     releaseName: casbin-auth-rbac
     namespace: casbin-auth
     valuesFile: values-rbac.yaml
-  - name: casbin-traefik-forward-auth
+  - name: casbin-forward-auth
     releaseName: casbin-auth-keymatch
     namespace: casbin-auth
     valuesFile: values-keymatch.yaml

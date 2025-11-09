@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/grepplabs/casbin-traefik-forward-auth/internal/config"
-	"github.com/grepplabs/casbin-traefik-forward-auth/internal/server"
+	"github.com/grepplabs/casbin-forward-auth/internal/config"
+	"github.com/grepplabs/casbin-forward-auth/internal/server"
 	"github.com/grepplabs/loggo/zlog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -18,7 +18,7 @@ var cfg config.Config
 func main() {
 	root := &cobra.Command{
 		Use:   "server",
-		Short: "casbin-traefik-forward-auth",
+		Short: "casbin-forward-auth",
 		Run: func(cmd *cobra.Command, args []string) {
 			run()
 		},

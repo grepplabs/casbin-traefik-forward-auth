@@ -10,9 +10,9 @@ import (
 	"github.com/casbin/casbin/v2/model"
 	"github.com/casbin/casbin/v2/persist"
 	fileadapter "github.com/casbin/casbin/v2/persist/file-adapter"
+	"github.com/grepplabs/casbin-forward-auth/internal/config"
+	"github.com/grepplabs/casbin-forward-auth/internal/models"
 	casbinkube "github.com/grepplabs/casbin-kube"
-	"github.com/grepplabs/casbin-traefik-forward-auth/internal/config"
-	"github.com/grepplabs/casbin-traefik-forward-auth/internal/models"
 	"github.com/grepplabs/loggo/zlog"
 )
 

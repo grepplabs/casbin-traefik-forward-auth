@@ -1,10 +1,10 @@
 version: 2
-project_name: casbin-traefik-forward-auth
+project_name: casbin-forward-auth
 
 builds:
-  - id: casbin-traefik-forward-auth
-    main: ./cmd/casbin-traefik-forward-auth/main.go
-    binary: casbin-traefik-forward-auth
+  - id: casbin-forward-auth
+    main: ./cmd/casbin-forward-auth/main.go
+    binary: casbin-forward-auth
     env:
       - CGO_ENABLED=0
     goos:
@@ -25,6 +25,6 @@ changelog:
 release:
   github:
     owner: grepplabs
-    name: casbin-traefik-forward-auth
+    name: casbin-forward-auth
   draft: false
   prerelease: auto

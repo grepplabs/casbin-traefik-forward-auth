@@ -18,7 +18,7 @@ Type "kubectl get middleware -n traefik casbin-auth -o yaml | yq" Sleep 500ms En
 Enter
 Sleep 2s
 
-Type "echo 'casbin-traefik-forward-auth acts as Traefik ForwardAuth middleware.'"
+Type "echo 'casbin-forward-auth acts as Traefik ForwardAuth middleware.'"
 Enter
 Sleep 5s
 

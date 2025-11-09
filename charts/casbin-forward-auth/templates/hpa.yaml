@@ -2,14 +2,14 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "casbin-traefik-forward-auth.fullname" . }}
+  name: {{ include "casbin-forward-auth.fullname" . }}
   labels:
-    {{- include "casbin-traefik-forward-auth.labels" . | nindent 4 }}
+    {{- include "casbin-forward-auth.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "casbin-traefik-forward-auth.fullname" . }}
+    name: {{ include "casbin-forward-auth.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:

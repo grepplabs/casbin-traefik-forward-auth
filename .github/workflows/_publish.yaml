@@ -27,7 +27,7 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  CHART_DIR: charts/casbin-traefik-forward-auth
+  CHART_DIR: charts/casbin-forward-auth
   CHART_OCI_REPO: oci://ghcr.io/grepplabs/helm
 
 jobs:

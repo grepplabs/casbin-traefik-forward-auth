@@ -1,4 +1,4 @@
-module github.com/grepplabs/casbin-traefik-forward-auth/test/e2e
+module github.com/grepplabs/casbin-forward-auth/test/e2e
 
 go 1.24.7
 

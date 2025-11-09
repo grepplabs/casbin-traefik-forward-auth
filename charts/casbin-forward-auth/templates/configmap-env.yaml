@@ -2,9 +2,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "casbin-traefik-forward-auth.fullname" . }}-env
+  name: {{ include "casbin-forward-auth.fullname" . }}-env
   labels:
-    {{- include "casbin-traefik-forward-auth.labels" . | nindent 4 }}
+    {{- include "casbin-forward-auth.labels" . | nindent 4 }}
 data:
 {{- range $k, $v := .Values.application.env }}
   {{ $k }}: {{ $v | quote }}

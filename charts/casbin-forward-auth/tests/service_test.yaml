@@ -3,7 +3,7 @@ templates:
   - service.yaml
 
 release:
-  name: casbin-traefik-forward-auth
+  name: casbin-forward-auth
   namespace: casbin-auth
 
 tests:
@@ -15,7 +15,7 @@ tests:
           of: Service
       - equal:
           path: metadata.name
-          value: casbin-traefik-forward-auth
+          value: casbin-forward-auth
       - equal:
           path: spec.type
           value: ClusterIP
@@ -30,7 +30,7 @@ tests:
           value: http
       - equal:
           path: spec.selector["app.kubernetes.io/name"]
-          value: casbin-traefik-forward-auth
+          value: casbin-forward-auth
 
   - it: should render the admin service
     template: service.yaml
@@ -40,7 +40,7 @@ tests:
           of: Service
       - equal:
           path: metadata.name
-          value: casbin-traefik-forward-auth-admin
+          value: casbin-forward-auth-admin
       - equal:
           path: spec.type
           value: ClusterIP
@@ -55,7 +55,7 @@ tests:
           value: admin
       - equal:
           path: spec.selector["app.kubernetes.io/name"]
-          value: casbin-traefik-forward-auth
+          value: casbin-forward-auth
 
   - it: should render the main LoadBalancer http service
     template: service.yaml
@@ -72,7 +72,7 @@ tests:
           of: Service
       - equal:
           path: metadata.name
-          value: casbin-traefik-forward-auth
+          value: casbin-forward-auth
       - equal:
           path: spec.type
           value: LoadBalancer
@@ -87,7 +87,7 @@ tests:
           value: http
       - equal:
           path: spec.selector["app.kubernetes.io/name"]
-          value: casbin-traefik-forward-auth
+          value: casbin-forward-auth
 
   - it: should render the admin NodePort service
     template: service.yaml
@@ -104,7 +104,7 @@ tests:
           of: Service
       - equal:
           path: metadata.name
-          value: casbin-traefik-forward-auth-admin
+          value: casbin-forward-auth-admin
       - equal:
           path: spec.type
           value: NodePort
@@ -119,4 +119,4 @@ tests:
           value: admin
       - equal:
           path: spec.selector["app.kubernetes.io/name"]
-          value: casbin-traefik-forward-auth
+          value: casbin-forward-auth

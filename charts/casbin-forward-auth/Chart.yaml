@@ -1,0 +1,6 @@
+apiVersion: v2
+name: casbin-forward-auth
+description: A Helm chart for a casbin-forward-auth.
+type: application
+version: 0.0.5
+appVersion: "v0.0.5"

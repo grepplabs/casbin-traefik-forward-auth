@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/grepplabs/casbin-traefik-forward-auth/internal/config"
+	"github.com/grepplabs/casbin-forward-auth/internal/config"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 

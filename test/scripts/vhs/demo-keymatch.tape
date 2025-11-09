@@ -27,7 +27,7 @@ Type "echo 'Let’s see access control with the keymatch_model in action!'" Slee
 Enter
 Sleep 2s
 
-Type "echo 'This demo runs on a local Kubernetes kind cluster with: Traefik as the Ingress Controller, casbin-traefik-forward-auth for authorization, Keycloak for identity and Echo as a protected sample service'" Sleep 500ms Enter
+Type "echo 'This demo runs on a local Kubernetes kind cluster with: Traefik as the Ingress Controller, casbin-forward-auth for authorization, Keycloak for identity and Echo as a protected sample service'" Sleep 500ms Enter
 Enter
 Sleep 3s
 ## Inspect config
@@ -50,7 +50,7 @@ Type "kubectl get middleware -n traefik casbin-auth -o yaml | yq" Sleep 500ms En
 Enter
 Sleep 2s
 
-Type "echo 'casbin-traefik-forward-auth acts as Traefik ForwardAuth middleware.'"
+Type "echo 'casbin-forward-auth acts as Traefik ForwardAuth middleware.'"
 Enter
 Sleep 5s
 

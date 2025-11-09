@@ -5,7 +5,7 @@ SHELL := /usr/bin/env bash
 ROOT_DIR       = $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 PROJECT_DIR    = $(realpath $(ROOT_DIR)/../../..)
 
-LOCAL_IMAGE := local/casbin-traefik-forward-auth:latest
+LOCAL_IMAGE := local/casbin-forward-auth:latest
 LOCAL_CLUSTER_ROOT_DIR ?= $(ROOT_DIR)/local/local-cluster
 LOCAL_CLUSTER_NAME ?= casbin-vhs
 LOCAL_KIND_CONFIG ?= $(ROOT_DIR)/kind-config-$(LOCAL_CLUSTER_NAME).yaml
@@ -41,7 +41,7 @@ local-cluster-delete:  ## delete local kind cluster
 .PHONY: local-apply
 local-apply: export KUBECONFIG=$(LOCAL_KUBECONFIG)
 local-apply:
-	kind load docker-image --name ${LOCAL_CLUSTER_NAME} local/casbin-traefik-forward-auth:latest
+	kind load docker-image --name ${LOCAL_CLUSTER_NAME} local/casbin-forward-auth:latest
 	kubectl kustomize $(LOCAL_CLUSTER_ROOT_DIR)/../traefik-crds --enable-helm | kubectl apply --server-side=true -f -
 	kubectl kustomize $(LOCAL_CLUSTER_ROOT_DIR) --enable-helm | kubectl apply --server-side=true -f -
 	- kubectl delete pod -n casbin-auth --all
@@ -123,7 +123,7 @@ disable-forward-auth:
 	kubectl annotate ingress echo -n default traefik.ingress.kubernetes.io/router.middlewares-
 
 show-config:
-	cat local/casbin-traefik-forward-auth/values.yaml
+	cat local/casbin-forward-auth/values.yaml
 
 show-policy:
 	curl -s https://raw.githubusercontent.com/casbin/casbin/refs/heads/master/examples/keymatch_policy.csv

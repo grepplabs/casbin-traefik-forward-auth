@@ -2,16 +2,16 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: {{ include "casbin-traefik-forward-auth.fullname" . }}
+  name: {{ include "casbin-forward-auth.fullname" . }}
   labels:
-    {{- include "casbin-traefik-forward-auth.labels" . | nindent 4 }}
+    {{- include "casbin-forward-auth.labels" . | nindent 4 }}
     {{- with .Values.serviceMonitor.additionalLabels }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
 spec:
   selector:
     matchLabels:
-      {{- include "casbin-traefik-forward-auth.selectorLabels" . | nindent 6 }}
+      {{- include "casbin-forward-auth.selectorLabels" . | nindent 6 }}
   endpoints:
     - port: admin
       interval: {{ .Values.serviceMonitor.interval }}

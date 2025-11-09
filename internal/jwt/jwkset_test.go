@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/grepplabs/casbin-traefik-forward-auth/internal/config"
+	"github.com/grepplabs/casbin-forward-auth/internal/config"
 	tlsconfig "github.com/grepplabs/cert-source/config"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/stretchr/testify/assert"

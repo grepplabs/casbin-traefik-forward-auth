@@ -3,7 +3,7 @@ templates:
   - configmap-config.yaml
 
 release:
-  name: casbin-traefik-forward-auth
+  name: casbin-forward-auth
   namespace: casbin-auth
 
 tests:

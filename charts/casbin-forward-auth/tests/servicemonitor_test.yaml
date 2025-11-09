@@ -3,7 +3,7 @@ templates:
   - servicemonitor.yaml
 
 release:
-  name: casbin-traefik-forward-auth
+  name: casbin-forward-auth
   namespace: casbin-auth
 
 tests:
@@ -23,10 +23,10 @@ tests:
           of: ServiceMonitor
       - equal:
           path: metadata.name
-          value: casbin-traefik-forward-auth
+          value: casbin-forward-auth
       - equal:
           path: spec.selector.matchLabels["app.kubernetes.io/name"]
-          value: casbin-traefik-forward-auth
+          value: casbin-forward-auth
       - equal:
           path: spec.endpoints[0].port
           value: admin

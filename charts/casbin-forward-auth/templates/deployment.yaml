@@ -3,16 +3,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "casbin-traefik-forward-auth.fullname" . }}
+  name: {{ include "casbin-forward-auth.fullname" . }}
   labels:
-    {{- include "casbin-traefik-forward-auth.labels" . | nindent 4 }}
+    {{- include "casbin-forward-auth.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "casbin-traefik-forward-auth.selectorLabels" . | nindent 6 }}
+      {{- include "casbin-forward-auth.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       annotations:
@@ -24,7 +24,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       labels:
-        {{- include "casbin-traefik-forward-auth.labels" . | nindent 8 }}
+        {{- include "casbin-forward-auth.labels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -33,7 +33,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "casbin-traefik-forward-auth.serviceAccountName" . }}
+      serviceAccountName: {{ include "casbin-forward-auth.serviceAccountName" . }}
       {{- with .Values.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
@@ -65,7 +65,7 @@ spec:
                   fieldPath: metadata.namespace
           envFrom:
             - configMapRef:
-                name: {{ include "casbin-traefik-forward-auth.fullname" . }}-env
+                name: {{ include "casbin-forward-auth.fullname" . }}-env
                 optional: true
             {{- with .Values.extraEnvFrom }}
             {{ tpl (toYaml .) . | nindent 12 }}
@@ -92,7 +92,7 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: {{ include "casbin-traefik-forward-auth.fullname" . }}-config
+            name: {{ include "casbin-forward-auth.fullname" . }}-config
         {{- with .Values.extraVolumes }}
         {{ tpl (toYaml .) . | nindent 8 }}
         {{- end }}

@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/grepplabs/casbin-traefik-forward-auth
+  repository: ghcr.io/grepplabs/casbin-forward-auth
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""

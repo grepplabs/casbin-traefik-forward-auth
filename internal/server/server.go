@@ -17,9 +17,9 @@ import (
 
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
-	"github.com/grepplabs/casbin-traefik-forward-auth/internal/auth"
-	"github.com/grepplabs/casbin-traefik-forward-auth/internal/jwt"
-	"github.com/grepplabs/casbin-traefik-forward-auth/internal/metrics"
+	"github.com/grepplabs/casbin-forward-auth/internal/auth"
+	"github.com/grepplabs/casbin-forward-auth/internal/jwt"
+	"github.com/grepplabs/casbin-forward-auth/internal/metrics"
 	tlsserverconfig "github.com/grepplabs/cert-source/tls/server/config"
 	"github.com/grepplabs/loggo/zlog"
 	"github.com/oklog/run"
@@ -29,7 +29,7 @@ import (
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 
-	"github.com/grepplabs/casbin-traefik-forward-auth/internal/config"
+	"github.com/grepplabs/casbin-forward-auth/internal/config"
 )
 
 const (

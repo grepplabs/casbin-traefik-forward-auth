@@ -6,12 +6,12 @@ ROOT_DIR       = $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 VERSION       ?= $(shell git describe --tags --always --dirty)
 
 TAG :=
-CHART_FILE := charts/casbin-traefik-forward-auth/Chart.yaml
+CHART_FILE := charts/casbin-forward-auth/Chart.yaml
 
 GOLANGCI_LINT_VERSION := v2.4.0
 
 DOCKER_BUILD_ARGS ?=
-LOCAL_IMAGE := local/casbin-traefik-forward-auth:latest
+LOCAL_IMAGE := local/casbin-forward-auth:latest
 LOCAL_CLUSTER_ROOT_DIR ?= $(ROOT_DIR)/test/scripts/local/local-cluster
 LOCAL_CLUSTER_NAME ?= casbin-traefik
 LOCAL_KIND_CONFIG ?= $(ROOT_DIR)/kind-config-$(LOCAL_CLUSTER_NAME).yaml
@@ -60,11 +60,11 @@ tidy: ## run go mod tidy
 
 .PHONY: build
 build: ## build binary
-	go build -gcflags "all=-N -l" -o ./casbin-traefik-forward-auth ./cmd/casbin-traefik-forward-auth
+	go build -gcflags "all=-N -l" -o ./casbin-forward-auth ./cmd/casbin-forward-auth
 
 .PHONY: clean
 clean: local-cluster-delete ## clean
-	rm -f ./casbin-traefik-forward-auth
+	rm -f ./casbin-forward-auth
 
 ##@ Docker
 
@@ -111,10 +111,10 @@ release: ## update helm chart version and appVersion and push tag
 ##@ Run targets
 
 run-server: ## run server
-	go run cmd/casbin-traefik-forward-auth/main.go --auth-route-config-path=examples/pubsub-routes-expr.yaml
+	go run cmd/casbin-forward-auth/main.go --auth-route-config-path=examples/pubsub-routes-expr.yaml
 
 run-tls-server: ## run TLS server
-	go run cmd/casbin-traefik-forward-auth/main.go --auth-route-config-path=examples/pubsub-routes-expr.yaml \
+	go run cmd/casbin-forward-auth/main.go --auth-route-config-path=examples/pubsub-routes-expr.yaml \
 		--server-addr=":8448" \
 		--server-admin-port=8081 \
 		--server-tls-enable \
@@ -123,7 +123,7 @@ run-tls-server: ## run TLS server
 		--server-tls-file-cert=$(LOCAL_CERT_DIR)/casbin-auth-server.pem
 
 build-run-server: build ## build and run server
-	./casbin-traefik-forward-auth --auth-route-config-path=examples/pubsub-routes-expr.yaml
+	./casbin-forward-auth --auth-route-config-path=examples/pubsub-routes-expr.yaml
 
 ##@ Local cluster
 
@@ -144,7 +144,7 @@ local-cluster-delete:  ## delete local kind cluster
 .PHONY: local-apply
 local-apply: export KUBECONFIG=$(LOCAL_KUBECONFIG)
 local-apply:
-	kind load docker-image --name ${LOCAL_CLUSTER_NAME} local/casbin-traefik-forward-auth:latest
+	kind load docker-image --name ${LOCAL_CLUSTER_NAME} local/casbin-forward-auth:latest
 	kubectl kustomize $(LOCAL_CLUSTER_ROOT_DIR)/../crds --enable-helm | kubectl apply --server-side=true -f -
 	kubectl kustomize $(LOCAL_CLUSTER_ROOT_DIR)/../traefik-crds --enable-helm | kubectl apply --server-side=true -f -
 	kubectl kustomize $(LOCAL_CLUSTER_ROOT_DIR) --enable-helm | kubectl apply --server-side=true -f -
@@ -170,7 +170,7 @@ benchmark: ## run benchmarks
 .PHONY: helm-unittest
 helm-unittest: ## run helm unittest
 	@# helm plugin install https://github.com/helm-unittest/helm-unittest.git --version v1.0.3
-	helm unittest charts/casbin-traefik-forward-auth
+	helm unittest charts/casbin-forward-auth
 
 ##@ Examples targets
 

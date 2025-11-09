@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "casbin-traefik-forward-auth.fullname" . }}-config
+  name: {{ include "casbin-forward-auth.fullname" . }}-config
   labels:
-    {{- include "casbin-traefik-forward-auth.labels" . | nindent 4 }}
+    {{- include "casbin-forward-auth.labels" . | nindent 4 }}
 data:
   auth-route-config.yaml: |
     {{ toYaml .Values.application.authRouteConfig | nindent 4 }}
