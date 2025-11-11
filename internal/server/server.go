@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"runtime/debug"
 	"strconv"
@@ -40,10 +41,14 @@ const (
 	HeaderForwardedFor    = "X-Forwarded-For"
 	HeaderHost            = "Host"
 	HeaderWWWAuthenticate = "WWW-Authenticate"
+	HeaderOriginalMethod  = "X-Original-Method"
+	HeaderOriginalURI     = "X-Original-Uri"
+	HeaderOriginalURL     = "X-Original-Url"
 )
 
 var (
-	ErrUnauthorized = errors.New("unauthorized")
+	ErrUnauthorized              = errors.New("unauthorized")
+	ErrMissingForwardAuthHeaders = errors.New("missing forward auth headers; verify the configured auth-header-source")
 )
 
 // nolint: funlen, cyclop
@@ -51,6 +56,10 @@ func buildEngine(registry *prometheus.Registry, cfg config.Config) (*gin.Engine,
 	closers := make(Closers, 0)
 
 	gin.SetMode(gin.ReleaseMode)
+
+	if err := cfg.Auth.Validate(); err != nil {
+		return nil, closers, fmt.Errorf("invalid auth config: %w", err)
+	}
 
 	mainMetricsMW, err := metrics.NewMiddlewareWithConfig(metrics.MiddlewareConfig{
 		Namespace:   "main",
@@ -86,9 +95,6 @@ func buildEngine(registry *prometheus.Registry, cfg config.Config) (*gin.Engine,
 	authEngine.Use(ginzap.RecoveryWithZap(authEngineLogger, true))
 	authEngine.Use(metrics.GinMiddleware(authMetricsMW))
 	if cfg.Auth.JWTConfig.Enabled {
-		if err := cfg.Auth.JWTConfig.Validate(); err != nil {
-			return nil, closers, fmt.Errorf("invalid JWT config: %w", err)
-		}
 		verifier, err := jwt.NewJWTVerifier(context.Background(), cfg.Auth.JWTConfig)
 		if err != nil {
 			return nil, closers, fmt.Errorf("invalid JWT verifier: %w", err)
@@ -117,7 +123,7 @@ func buildEngine(registry *prometheus.Registry, cfg config.Config) (*gin.Engine,
 	}
 	auth.SetupRoutes(authEngine, routeConfig.Routes, enforcer.SyncedEnforcer)
 
-	engine.GET("/v1/auth", authHandler(authEngine))
+	engine.GET("/v1/auth", authHandler(authEngine, config.AuthHeaderSourceAuto))
 
 	if cfg.Server.AdminPort == 0 {
 		addAdminEndpoints(registry, engine)
@@ -182,9 +188,9 @@ func addAdminEndpoints(registry *prometheus.Registry, engine *gin.Engine) {
 	}))
 }
 
-func authHandler(authEngine *gin.Engine) gin.HandlerFunc {
+func authHandler(authEngine *gin.Engine, authHeaderSource config.AuthHeaderSource) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		reason, headers, err := forwardAuth(c, authEngine)
+		reason, headers, err := forwardAuth(c, authEngine, authHeaderSource)
 		if err == nil {
 			c.String(http.StatusOK, reason)
 			return
@@ -279,12 +285,10 @@ func loadRouteConfig(path string) (*auth.RouteConfig, error) {
 	return &cfg, nil
 }
 
-func forwardAuth(c *gin.Context, authEngine *gin.Engine) (string, http.Header, error) {
-	forwardedUri := c.GetHeader(HeaderForwardedURI)
-	forwardedMethod := c.GetHeader(HeaderForwardedMethod)
-	forwardedHost := c.GetHeader(HeaderForwardedHost)
-	if forwardedUri == "" || forwardedMethod == "" || forwardedHost == "" {
-		return "", nil, errors.New("missing auth headers")
+func forwardAuth(c *gin.Context, authEngine *gin.Engine, authHeaderSource config.AuthHeaderSource) (string, http.Header, error) {
+	forwardedMethod, forwardedHost, forwardedUri, err := getForwardedTarget(c, authHeaderSource)
+	if err != nil {
+		return "", nil, err
 	}
 	lw := zlog.Logger.WithValues("method", forwardedMethod, "host", forwardedHost, "uri", forwardedUri)
 	lw.V(1).Info("forward auth")
@@ -307,6 +311,10 @@ func forwardAuth(c *gin.Context, authEngine *gin.Engine) (string, http.Header, e
 	req.Header.Del(HeaderForwardedHost)
 	req.Header.Del(HeaderForwardedURI)
 	req.Header.Del(HeaderForwardedFor)
+	// delete nginx headers
+	req.Header.Del(HeaderOriginalMethod)
+	req.Header.Del(HeaderOriginalURI)
+	req.Header.Del(HeaderOriginalURL)
 
 	// set original host
 	req.Host = forwardedHost
@@ -327,4 +335,58 @@ func forwardAuth(c *gin.Context, authEngine *gin.Engine) (string, http.Header, e
 		return "", nil, errors.New(w.Body.String())
 	}
 	return w.Body.String(), nil, nil
+}
+
+func getForwardedTarget(c *gin.Context, authHeaderSource config.AuthHeaderSource) (string, string, string, error) {
+	// SECURITY NOTE:
+	// In "auto" mode, this function attempts to resolve the request target from either
+	// X-Forwarded-* or X-Original-* headers. The trusted reverse proxy (e.g., Traefik or Nginx)
+	// MUST strip these headers from all incoming client requests before adding its own.
+	// Otherwise, an attacker could inject forged headers and spoof the original request
+	// method, host, or URI — potentially bypassing authentication or authorization logic.
+
+	switch authHeaderSource {
+	case config.AuthHeaderSourceForwarded:
+		return getFromForwarded(c)
+	case config.AuthHeaderSourceOriginal:
+		return getFromOriginal(c)
+	case config.AuthHeaderSourceAuto:
+		// try forwarded first, then original — current behavior
+		if m, h, u, err := getFromForwarded(c); err == nil {
+			return m, h, u, nil
+		}
+		return getFromOriginal(c)
+	default:
+		return "", "", "", fmt.Errorf("unsupported header source %q", authHeaderSource)
+	}
+}
+
+func getFromForwarded(c *gin.Context) (string, string, string, error) {
+	method := c.GetHeader(HeaderForwardedMethod)
+	host := c.GetHeader(HeaderForwardedHost)
+	uri := c.GetHeader(HeaderForwardedURI)
+	if method == "" || host == "" || uri == "" {
+		return "", "", "", ErrMissingForwardAuthHeaders
+	}
+	return method, host, uri, nil
+}
+
+func getFromOriginal(c *gin.Context) (string, string, string, error) {
+	method := c.GetHeader(HeaderOriginalMethod)
+	uri := c.GetHeader(HeaderOriginalURI)
+	host := ""
+	if raw := c.GetHeader(HeaderOriginalURL); raw != "" {
+		u, parseErr := url.Parse(raw)
+		if parseErr != nil {
+			return "", "", "", fmt.Errorf("invalid X-Original-URL: %w", parseErr)
+		}
+		host = u.Host
+		if uri == "" {
+			uri = u.RequestURI()
+		}
+	}
+	if method == "" || host == "" || uri == "" {
+		return "", "", "", ErrMissingForwardAuthHeaders
+	}
+	return method, host, uri, nil
 }

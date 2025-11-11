@@ -216,6 +216,7 @@ func newTestFileAdapterConfig(t *testing.T, model string, policies string, route
 		},
 		Auth: config.AuthConfig{
 			RouteConfigPath: routesPath,
+			HeaderSource:    config.AuthHeaderSourceAuto,
 		},
 		Casbin: config.CasbinConfig{
 			Model:   model,

@@ -1,0 +1,41 @@
+controller:
+  replicaCount: 1
+  enabled: true
+  extraArgs:
+    v: "5"
+
+  service:
+    enabled: true
+    type: NodePort
+    nodePorts:
+      http: 30180
+      https: ""
+    external:
+      enabled: true
+
+  publishService:
+    enabled: false
+
+  ingressClassResource:
+    enabled: true
+    name: nginx
+    default: false
+  allowSnippetAnnotations: true
+
+  config:
+    error-log-level: info
+    log-format-escape-json: "true"
+    log-format-upstream: >
+      {"time": "$time_iso8601",
+       "remote_addr": "$remote_addr",
+       "method": "$request_method",
+       "uri": "$uri",
+       "status": $status,
+       "host": "$host",
+       "x_forwarded_for": "$http_x_forwarded_for",
+       "x_forwarded_proto": "$http_x_forwarded_proto",
+       "x_original_uri": "$http_x_original_uri",
+       "x_original_method": "$http_x_original_method",
+       "x_request_id": "$http_x_request_id",
+       "upstream_addr": "$upstream_addr",
+       "request_time": $request_time}

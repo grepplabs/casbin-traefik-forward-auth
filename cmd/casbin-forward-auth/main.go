@@ -42,6 +42,7 @@ func main() {
 
 	// auth flags
 	root.Flags().StringVar(&cfg.Auth.RouteConfigPath, "auth-route-config-path", "", "Path to the config YAML file containing route authorization rules.")
+	root.Flags().StringVar(&cfg.Auth.HeaderSource, "auth-header-source", config.AuthHeaderSourceForwarded, "Source of auth forward headers. One of: forwarded (Traefik), original (Nginx), auto. Use 'auto' with caution; proxy should strip untrusted X- headers.")
 
 	// casbin flags
 	root.Flags().StringVar(&cfg.Casbin.Model, "casbin-model", "rbac_model.conf", "Path or reference to the Casbin model (e.g. file:///etc/casbin/model.conf or rbac_model.conf from embedded FS).")
