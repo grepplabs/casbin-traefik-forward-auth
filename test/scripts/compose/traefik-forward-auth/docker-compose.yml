@@ -1,0 +1,46 @@
+services:
+  traefik:
+    image: traefik:v3.6.0
+    container_name: traefik
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "8080:80"
+      - "8081:8080" # optional: dashboard at http://localhost:8081/dashboard/
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+# TODO: kanidm with claims
+  forward-auth:
+#    build:
+#      context: ../../../../
+#      dockerfile: Dockerfile
+    image: ghcr.io/grepplabs/casbin-forward-auth:v0.0.7
+    container_name: forward-auth
+    volumes:
+      - ./config:/etc/app:ro
+    environment:
+      - LOG_FORMAT=text
+      - CASBIN_MODEL=keymatch_model.conf
+      - CASBIN_ADAPTER=file
+      - CASBIN_ADAPTER_FILE_POLICY_PATH=/etc/app/keymatch_policy.csv
+      - AUTH_ROUTE_CONFIG_PATH=/etc/app/auth-route-config-path.yaml
+  echo:
+    image: ealen/echo-server:0.9.2
+    environment:
+      - PORT=18082
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.echo.rule=Host(`echo.localhost`) || Host(`echo.127.0.0.1.nip.io`) || Host(`localhost`)"
+      - "traefik.http.routers.echo.entrypoints=web"
+
+      - "traefik.http.services.echo.loadbalancer.server.port=18082"
+
+      - "traefik.http.routers.echo.middlewares=echo-forwardauth"
+      - "traefik.http.middlewares.echo-forwardauth.forwardauth.address=http://forward-auth:8080/v1/auth"
+      - "traefik.http.middlewares.echo-forwardauth.forwardauth.trustForwardHeader=true"
+      - "traefik.http.middlewares.echo-forwardauth.forwardauth.authResponseHeaders=WWW-Authenticate,X-Casbin-Auth-JWT"

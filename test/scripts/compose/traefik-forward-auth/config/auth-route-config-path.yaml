@@ -1,0 +1,18 @@
+routes:
+  - httpMethod: ANY
+    relativePaths:
+      - /*any
+    params:
+      - name: user
+        source: basicAuthUser
+      - name: resource
+        source: urlPath
+      - name: method
+        source: httpMethod
+    rules:
+      - format: "%s"
+        paramNames: [ user ]
+      - format: "%s"
+        paramNames: [ resource ]
+      - format: "%s"
+        paramNames: [ method ]
