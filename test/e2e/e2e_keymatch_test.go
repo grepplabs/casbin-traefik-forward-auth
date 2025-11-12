@@ -11,12 +11,20 @@ import (
 
 func Test_KeyMatch(t *testing.T) {
 	options := newKubectlOptions()
-
-	k8s.KubectlApply(t, options, "testdata/middleware-keymatch.yml")
+	k8s.KubectlApplyFromKustomize(t, options, "testmanifests/")
 
 	kubeResourcePath := "testdata/keymatch-echo-policy.yaml"
 	defer kubectlDeleteIgnoreNotFound(t, options, kubeResourcePath)
 	k8s.KubectlApply(t, options, kubeResourcePath)
+
+	type target struct {
+		name    string
+		baseURL string
+	}
+	targets := []target{
+		{name: "traefik", baseURL: "http://keymatch.127.0.0.1.nip.io:30080"},
+		{name: "nginx", baseURL: "http://keymatch.127.0.0.1.nip.io:30180"},
+	}
 
 	type tc struct {
 		name     string
@@ -49,28 +57,31 @@ func Test_KeyMatch(t *testing.T) {
 		{name: "unsupported verb denied", user: "alice", url: "/alice_data/foo", method: http.MethodPut, wantCode: http.StatusForbidden},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			headers := map[string]string{
-				"Host":          "echo.local",
-				"Authorization": "Basic " + newTestBasic(t, tt.user),
-			}
-			fullURL := buildURL(tt.url)
-			switch tt.wantCode {
-			case http.StatusOK:
-				requireOK(t, tt.method, fullURL, headers)
-			case http.StatusForbidden:
-				requireRejected(t, tt.method, fullURL, headers)
-			default:
-				_ = httphelper.HTTPDoWithRetry(t, tt.method, fullURL, nil, headers, tt.wantCode, 10, 2*time.Second, nil)
+	for _, tg := range targets {
+		t.Run("target="+tg.name, func(t *testing.T) {
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					headers := map[string]string{
+						"Authorization": "Basic " + newTestBasic(t, tt.user),
+					}
+					fullURL := buildURL(tg.baseURL, tt.url)
+					switch tt.wantCode {
+					case http.StatusOK:
+						requireOK(t, tt.method, fullURL, headers)
+					case http.StatusForbidden:
+						requireRejected(t, tt.method, fullURL, headers)
+					default:
+						_ = httphelper.HTTPDoWithRetry(t, tt.method, fullURL, nil, headers, tt.wantCode, 10, 2*time.Second, nil)
+					}
+				})
 			}
 		})
 	}
-
 	k8s.KubectlDelete(t, options, kubeResourcePath)
-	headers := map[string]string{
-		"Host":          "echo.local",
-		"Authorization": "Basic " + newTestBasic(t, "alice"),
+	for _, tg := range targets {
+		headers := map[string]string{
+			"Authorization": "Basic " + newTestBasic(t, "alice"),
+		}
+		requireRejected(t, http.MethodGet, buildURL(tg.baseURL, "/alice_data/foo"), headers)
 	}
-	requireRejected(t, http.MethodGet, buildURL("/alice_data/foo"), headers)
 }

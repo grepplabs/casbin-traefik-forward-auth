@@ -10,6 +10,7 @@ serviceMonitor:
 application:
   env:
     LOG_FORMAT: "text"
+    AUTH_HEADER_SOURCE: "auto"
     CASBIN_MODEL: keymatch_model.conf
     CASBIN_ADAPTER_KUBE_CONFIG_LABELS: "casbin.grepplabs.com/model=keymatch"
   adapter:

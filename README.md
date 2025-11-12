@@ -3,11 +3,11 @@
 [![Build](https://github.com/grepplabs/casbin-forward-auth/actions/workflows/build.yml/badge.svg)](https://github.com/grepplabs/casbin-forward-auth/actions/workflows/build.yml)
 [![Release](https://img.shields.io/github/v/release/grepplabs/casbin-forward-auth?sort=semver)](https://github.com/grepplabs/casbin-forward-auth/releases)
 
-A ForwardAuth service for [Traefik](https://traefik.io/) with [Casbin-based](https://casbin.org/) authorization.
+A ForwardAuth service for [Traefik](https://traefik.io/) or [NGINX](https://nginx.org/) with [Casbin-based](https://casbin.org/) authorization.
 
-This service provides a forward authentication endpoint for Traefik, allowing you to protect your services with
+This service provides a forward authentication endpoint for Traefik or NGINX allowing you to protect your services with
 fine-grained access control policies defined using Casbin.
-It acts as a gatekeeper, intercepting requests from Traefik, evaluating them against your Casbin policies, and then
+It acts as a gatekeeper, intercepting requests from the proxy, evaluating them against your Casbin policies, and then
 allowing or denying the request based on the outcome.
 
 ### Key Features
@@ -69,6 +69,7 @@ allowing or denying the request based on the outcome.
     * If JWT is enabled and validation fails, returns `401 Unauthorized`.
 
 ## 🎬 Demo
+
 Demo showing request authorization with **Casbin Traefik Forward Auth** and the **KEYMATCH** policy model.
 
 <p style="text-align: left;">
@@ -94,7 +95,9 @@ Install the Casbin Traefik Forward Auth Helm chart:
 helm install casbin-auth oci://ghcr.io/grepplabs/helm/casbin-forward-auth:<char version> -f your-values.yaml
 ```
 
-**Create a Traefik `Middleware` (ForwardAuth)**
+**Traefik**
+
+***Create a Traefik `Middleware` (ForwardAuth)***
 
 Example Traefik CRDs:
 
@@ -115,7 +118,7 @@ spec:
 
 ``` 
 
-**Attach the middleware to your route**
+***Attach the middleware to your route***
 
 You can apply the ForwardAuth middleware in several ways:
 
@@ -126,50 +129,117 @@ You can apply the ForwardAuth middleware in several ways:
 - **Ingress:** use the annotation `traefik.ingress.kubernetes.io/router.middlewares` on standard
   Kubernetes [Ingress](https://doc.traefik.io/traefik/reference/routing-configuration/kubernetes/ingress/) objects.
 
+Example Ingress:
+
+```yaml
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: echo-traefik
+  labels:
+    app: echo
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: traefik-casbin-auth@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: echo.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: echo
+                port:
+                  number: 80
+```
+
+
+**NGINX**
+
+Deploy the service with `AUTH_HEADER_SOURCE=original` to use the `X-Original-*` forward headers instead of the `X-Forwarded-*` headers during evaluation -
+for example, changing `X-Forwarded-URI` to `X-Original-URL`.
+
+Alternatively, setting `AUTH_HEADER_SOURCE=auto` allows the service to resolve the request target from either `X-Forwarded-*` or `X-Original-*` headers.
+When using `auto` mode, the trusted reverse proxy must strip these headers from all incoming client requests before adding its own.
+Failing to do so could allow an attacker to inject forged `X-Forwarded` headers and spoof the original request’s method, host, or URI - potentially bypassing authentication or authorization logic.
+
+Example Ingress:
+
+```yaml
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: echo-nginx
+  labels:
+    app: echo
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: "http://casbin-auth.casbin-auth.svc.cluster.local/v1/auth"
+    nginx.ingress.kubernetes.io/auth-response-headers: "X-Casbin-Auth-JWT,WWW-Authenticate"
+    nginx.ingress.kubernetes.io/auth-method: GET
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: echo.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: echo
+                port:
+                  number: 80
+```
+
 ## Configuration
 
 The service is configured using command-line flags or environment variables.
 
-| Flag                                   | Environment Variable                   | Description                                                                                                                    | Default                    |
-|:---------------------------------------|:---------------------------------------|:-------------------------------------------------------------------------------------------------------------------------------|:---------------------------|
-| `server-addr`                          | `SERVER_ADDR`                          | Server listen address.                                                                                                         | `:8080`                    |
-| `server-admin-port`                    | `SERVER_ADMIN_PORT`                    | Admin server port (0 to disable).                                                                                              | `0`                        |
-| `server-tls-enable`                    | `SERVER_TLS_ENABLE`                    | Enable server-side TLS.                                                                                                        | `false`                    |
-| `server-tls-refresh`                   | `SERVER_TLS_REFRESH`                   | Interval for refreshing server TLS certificates. Set to `0` to disable auto-refresh.                                           | `0`                        |
-| `server-tls-key-password`              | `SERVER_TLS_KEY_PASSWORD`              | Password to decrypt RSA private key.                                                                                           |                            |
-| `server-tls-file-key`                  | `SERVER_TLS_FILE_KEY`                  | Path to the server TLS private key file.                                                                                       |                            |
-| `server-tls-file-cert`                 | `SERVER_TLS_FILE_CERT`                 | Path to the server TLS certificate file.                                                                                       |                            |
-| `server-tls-file-client-ca`            | `SERVER_TLS_FILE_CLIENT_CA`            | Path to the server client CA file for client verification.                                                                     |                            |
-| `server-tls-file-client-crl`           | `SERVER_TLS_FILE_CLIENT_CRL`           | Path to the TLS X509 CRL signed by the client CA. If unspecified, only the client CA is verified.                              |                            |
-| `metrics-include-host`                 | `METRICS_INCLUDE_HOST`                 | Include HTTP Host header as a Prometheus label (can increase cardinality).                                                     | `false`                    |
-| `auth-route-config-path`               | `AUTH_ROUTE_CONFIG_PATH`               | Path to the config YAML file containing route authorization rules.                                                             |                            |
-| `casbin-model`                         | `CASBIN_MODEL`                         | Path or reference to the Casbin model (e.g. `file:///etc/casbin/model.conf` or `rbac_model.conf`).                             | `rbac_model.conf`          |
-| `casbin-adapter`                       | `CASBIN_ADAPTER`                       | Casbin adapter. One of: `file`, `kube`.                                                                                        | `kube`                     |
-| `casbin-autoload-interval`             | `CASBIN_AUTOLOAD_INTERVAL`             | Interval for automatically reloading Casbin policies (e.g. 30s, 1m). Set to 0 to disable.                                      | `0`                        |
-| `casbin-adapter-file-policy-path`      | `CASBIN_ADAPTER_FILE_POLICY_PATH`      | Path to the policy file.                                                                                                       | `examples/rbac_policy.csv` |
-| `casbin-adapter-kube-disable-informer` | `CASBIN_ADAPTER_KUBE_DISABLE_INFORMER` | Disable the Casbin Kubernetes informer.                                                                                        | `false`                    |
-| `casbin-adapter-kube-config-context`   | `CASBIN_ADAPTER_KUBE_CONFIG_CONTEXT`   | Name of the Kubernetes context to use from the kubeconfig file.                                                                |                            |
-| `casbin-adapter-kube-config-namespace` | `CASBIN_ADAPTER_KUBE_CONFIG_NAMESPACE` | Kubernetes namespace where Casbin policies are stored.                                                                         | value of `POD_NAMESPACE`   |
-| `casbin-adapter-kube-config-path`      | `CASBIN_ADAPTER_KUBE_CONFIG_PATH`      | Path to the kubeconfig file.                                                                                                   |                            |
-| `casbin-adapter-kube-config-labels`    | `CASBIN_ADAPTER_KUBE_CONFIG_LABELS`    | Labels to filter policies. Example: `key1=val1,key2=val2`.                                                                     |                            |
-| `jwt-enabled`                          | `JWT_ENABLED`                          | Enable JWT verification for incoming requests. When enabled, `jwt-jwks-url`, `jwt-issuer`, and `jwt-audience` must be set.     | `false`                    |
-| `jwt-jwks-url`                         | `JWT_JWKS_URL`                         | URL or file path to the JWKS source (e.g. `https://issuer.example.com/.well-known/jwks.json` or `file:///etc/jwks/keys.json`). |                            |
-| `jwt-issuer`                           | `JWT_ISSUER`                           | Expected JWT issuer (`iss` claim).                                                                                             |                            |
-| `jwt-audience`                         | `JWT_AUDIENCE`                         | Expected JWT audience (`aud` claim).                                                                                           |                            |
-| `jwt-skew`                             | `JWT_SKEW`                             | Clock skew tolerance for `exp`/`nbf` claims (e.g. `30s`).                                                                      | `0`                        |
-| `jwt-init-timeout`                     | `JWT_INIT_TIMEOUT`                     | Maximum time to wait for initial JWKS fetch during startup.                                                                    | `15s`                      |
-| `jwt-refresh-timeout`                  | `JWT_REFRESH_TIMEOUT`                  | Timeout for individual JWKS refresh requests.                                                                                  | `2s`                       |
-| `jwt-min-refresh-interval`             | `JWT_MIN_REFRESH_INTERVAL`             | Minimum interval between JWKS refresh attempts.                                                                                | `0`                        |
-| `jwt-max-refresh-interval`             | `JWT_MAX_REFRESH_INTERVAL`             | Maximum interval between JWKS refresh attempts.                                                                                | `0`                        |
-| `jwt-use-x509`                         | `JWT_USE_X509`                         | Indicates that the JWKS source contains X.509-encoded keys (PEM certificates) instead of standard JWK JSON.                    | `false`                    |
-| `jwt-tls-enable`                       | `JWT_TLS_ENABLE`                       | Enable TLS configuration for the JWKS HTTPS client.                                                                            | `false`                    |
-| `jwt-tls-file-cert`                    | `JWT_TLS_FILE_CERT`                    | Path to the client TLS certificate file (for mTLS).                                                                            |                            |
-| `jwt-tls-file-key`                     | `JWT_TLS_FILE_KEY`                     | Path to the client TLS private key file (for mTLS).                                                                            |                            |
-| `jwt-tls-file-root-ca`                 | `JWT_TLS_FILE_ROOT_CA`                 | Path to a custom root CA bundle for verifying the JWKS server.                                                                 |                            |
-| `jwt-tls-key-password`                 | `JWT_TLS_KEY_PASSWORD`                 | Password to decrypt the RSA private key.                                                                                       |                            |
-| `jwt-tls-insecure-skip-verify`         | `JWT_TLS_INSECURE_SKIP_VERIFY`         | Skip server certificate verification (insecure; use only for testing).                                                         | `false`                    |
-| `jwt-tls-refresh`                      | `JWT_TLS_REFRESH`                      | Interval for reloading client TLS certificates. Set to `0` to disable auto-refresh.                                            | `0`                        |
-| `jwt-tls-use-system-pool`              | `JWT_TLS_USE_SYSTEM_POOL`              | Use the system certificate pool for verifying server certificates.                                                             | `true`                     |
+| Flag                                   | Environment Variable                   | Description                                                                                                                                                  | Default                    |
+|:---------------------------------------|:---------------------------------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------|:---------------------------|
+| `server-addr`                          | `SERVER_ADDR`                          | Server listen address.                                                                                                                                       | `:8080`                    |
+| `server-admin-port`                    | `SERVER_ADMIN_PORT`                    | Admin server port (0 to disable).                                                                                                                            | `0`                        |
+| `server-tls-enable`                    | `SERVER_TLS_ENABLE`                    | Enable server-side TLS.                                                                                                                                      | `false`                    |
+| `server-tls-refresh`                   | `SERVER_TLS_REFRESH`                   | Interval for refreshing server TLS certificates. Set to `0` to disable auto-refresh.                                                                         | `0`                        |
+| `server-tls-key-password`              | `SERVER_TLS_KEY_PASSWORD`              | Password to decrypt RSA private key.                                                                                                                         |                            |
+| `server-tls-file-key`                  | `SERVER_TLS_FILE_KEY`                  | Path to the server TLS private key file.                                                                                                                     |                            |
+| `server-tls-file-cert`                 | `SERVER_TLS_FILE_CERT`                 | Path to the server TLS certificate file.                                                                                                                     |                            |
+| `server-tls-file-client-ca`            | `SERVER_TLS_FILE_CLIENT_CA`            | Path to the server client CA file for client verification.                                                                                                   |                            |
+| `server-tls-file-client-crl`           | `SERVER_TLS_FILE_CLIENT_CRL`           | Path to the TLS X509 CRL signed by the client CA. If unspecified, only the client CA is verified.                                                            |                            |
+| `metrics-include-host`                 | `METRICS_INCLUDE_HOST`                 | Include HTTP Host header as a Prometheus label (can increase cardinality).                                                                                   | `false`                    |
+| `auth-route-config-path`               | `AUTH_ROUTE_CONFIG_PATH`               | Path to the config YAML file containing route authorization rules.                                                                                           |                            |
+| `auth-header-source`                   | `AUTH_HEADER_SOURCE`                   | Source of auth forward headers. One of: `forwarded` (Traefik), `original` (Nginx), `auto`. Use `auto` with caution; proxy should strip untrusted X- headers. | `forwarded`                |
+| `casbin-model`                         | `CASBIN_MODEL`                         | Path or reference to the Casbin model (e.g. `file:///etc/casbin/model.conf` or `rbac_model.conf`).                                                           | `rbac_model.conf`          |
+| `casbin-adapter`                       | `CASBIN_ADAPTER`                       | Casbin adapter. One of: `file`, `kube`.                                                                                                                      | `kube`                     |
+| `casbin-autoload-interval`             | `CASBIN_AUTOLOAD_INTERVAL`             | Interval for automatically reloading Casbin policies (e.g. 30s, 1m). Set to 0 to disable.                                                                    | `0`                        |
+| `casbin-adapter-file-policy-path`      | `CASBIN_ADAPTER_FILE_POLICY_PATH`      | Path to the policy file.                                                                                                                                     | `examples/rbac_policy.csv` |
+| `casbin-adapter-kube-disable-informer` | `CASBIN_ADAPTER_KUBE_DISABLE_INFORMER` | Disable the Casbin Kubernetes informer.                                                                                                                      | `false`                    |
+| `casbin-adapter-kube-config-context`   | `CASBIN_ADAPTER_KUBE_CONFIG_CONTEXT`   | Name of the Kubernetes context to use from the kubeconfig file.                                                                                              |                            |
+| `casbin-adapter-kube-config-namespace` | `CASBIN_ADAPTER_KUBE_CONFIG_NAMESPACE` | Kubernetes namespace where Casbin policies are stored.                                                                                                       | value of `POD_NAMESPACE`   |
+| `casbin-adapter-kube-config-path`      | `CASBIN_ADAPTER_KUBE_CONFIG_PATH`      | Path to the kubeconfig file.                                                                                                                                 |                            |
+| `casbin-adapter-kube-config-labels`    | `CASBIN_ADAPTER_KUBE_CONFIG_LABELS`    | Labels to filter policies. Example: `key1=val1,key2=val2`.                                                                                                   |                            |
+| `jwt-enabled`                          | `JWT_ENABLED`                          | Enable JWT verification for incoming requests. When enabled, `jwt-jwks-url`, `jwt-issuer`, and `jwt-audience` must be set.                                   | `false`                    |
+| `jwt-jwks-url`                         | `JWT_JWKS_URL`                         | URL or file path to the JWKS source (e.g. `https://issuer.example.com/.well-known/jwks.json` or `file:///etc/jwks/keys.json`).                               |                            |
+| `jwt-issuer`                           | `JWT_ISSUER`                           | Expected JWT issuer (`iss` claim).                                                                                                                           |                            |
+| `jwt-audience`                         | `JWT_AUDIENCE`                         | Expected JWT audience (`aud` claim).                                                                                                                         |                            |
+| `jwt-skew`                             | `JWT_SKEW`                             | Clock skew tolerance for `exp`/`nbf` claims (e.g. `30s`).                                                                                                    | `0`                        |
+| `jwt-init-timeout`                     | `JWT_INIT_TIMEOUT`                     | Maximum time to wait for initial JWKS fetch during startup.                                                                                                  | `15s`                      |
+| `jwt-refresh-timeout`                  | `JWT_REFRESH_TIMEOUT`                  | Timeout for individual JWKS refresh requests.                                                                                                                | `2s`                       |
+| `jwt-min-refresh-interval`             | `JWT_MIN_REFRESH_INTERVAL`             | Minimum interval between JWKS refresh attempts.                                                                                                              | `0`                        |
+| `jwt-max-refresh-interval`             | `JWT_MAX_REFRESH_INTERVAL`             | Maximum interval between JWKS refresh attempts.                                                                                                              | `0`                        |
+| `jwt-use-x509`                         | `JWT_USE_X509`                         | Indicates that the JWKS source contains X.509-encoded keys (PEM certificates) instead of standard JWK JSON.                                                  | `false`                    |
+| `jwt-tls-enable`                       | `JWT_TLS_ENABLE`                       | Enable TLS configuration for the JWKS HTTPS client.                                                                                                          | `false`                    |
+| `jwt-tls-file-cert`                    | `JWT_TLS_FILE_CERT`                    | Path to the client TLS certificate file (for mTLS).                                                                                                          |                            |
+| `jwt-tls-file-key`                     | `JWT_TLS_FILE_KEY`                     | Path to the client TLS private key file (for mTLS).                                                                                                          |                            |
+| `jwt-tls-file-root-ca`                 | `JWT_TLS_FILE_ROOT_CA`                 | Path to a custom root CA bundle for verifying the JWKS server.                                                                                               |                            |
+| `jwt-tls-key-password`                 | `JWT_TLS_KEY_PASSWORD`                 | Password to decrypt the RSA private key.                                                                                                                     |                            |
+| `jwt-tls-insecure-skip-verify`         | `JWT_TLS_INSECURE_SKIP_VERIFY`         | Skip server certificate verification (insecure; use only for testing).                                                                                       | `false`                    |
+| `jwt-tls-refresh`                      | `JWT_TLS_REFRESH`                      | Interval for reloading client TLS certificates. Set to `0` to disable auto-refresh.                                                                          | `0`                        |
+| `jwt-tls-use-system-pool`              | `JWT_TLS_USE_SYSTEM_POOL`              | Use the system certificate pool for verifying server certificates.                                                                                           | `true`                     |
 
 ## Routing Configuration
 
@@ -316,7 +386,7 @@ The following table lists the configurable parameters of the casbin-forward-auth
 | Key                                          | Type   | Default                                                                                       | Description                                                                                                                                                         |
 |----------------------------------------------|--------|-----------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `replicaCount`                               | int    | `1`                                                                                           | Number of replicas for the deployment.                                                                                                                              |
-| `image.repository`                           | string | `ghcr.io/grepplabs/casbin-forward-auth`                                               | Image repository.                                                                                                                                                   |
+| `image.repository`                           | string | `ghcr.io/grepplabs/casbin-forward-auth`                                                       | Image repository.                                                                                                                                                   |
 | `image.pullPolicy`                           | string | `IfNotPresent`                                                                                | Image pull policy.                                                                                                                                                  |
 | `image.tag`                                  | string | `""`                                                                                          | Overrides the image tag whose default is the chart appVersion.                                                                                                      |
 | `imagePullSecrets`                           | list   | `[]`                                                                                          | Secrets to use for pulling images.                                                                                                                                  |

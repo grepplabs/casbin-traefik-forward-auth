@@ -4,19 +4,20 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	httphelper "github.com/gruntwork-io/terratest/modules/http-helper"
 	"github.com/gruntwork-io/terratest/modules/k8s"
+	"github.com/gruntwork-io/terratest/modules/retry"
 	terratesting "github.com/gruntwork-io/terratest/modules/testing"
 	"github.com/stretchr/testify/require"
 )
 
 const (
 	configPath = "../../kubeconfig-casbin-traefik"
-	baseURL    = "http://localhost:30080"
 )
 
 func newKubectlOptions() *k8s.KubectlOptions {
@@ -27,18 +28,42 @@ func kubectlDeleteIgnoreNotFound(t terratesting.TestingT, options *k8s.KubectlOp
 	require.NoError(t, k8s.RunKubectlE(t, options, "delete", "--ignore-not-found=true", "-f", configPath))
 }
 
-func buildURL(path string) string {
-	return baseURL + path
+func buildURL(baseUrl, path string) string {
+	return baseUrl + path
 }
 
 func requireRejected(t *testing.T, method string, url string, headers map[string]string) {
-	const expectedBody = `{"error":"rejected"}`
-	httphelper.HTTPDoWithValidationRetry(t, method, url, nil, headers, http.StatusForbidden, expectedBody, 10, 2*time.Second, nil)
+	HTTPDoWithCustomValidationRetry(t, method, url, headers,
+		func(status int, body string) bool {
+			if status != http.StatusForbidden {
+				return false
+			}
+			if body == `{"error":"rejected"}` {
+				return true
+			}
+			if strings.Contains(strings.ToLower(body), "nginx") {
+				return true
+			}
+			return false
+		}, 10, 2*time.Second,
+	)
 }
 
 func requireNotFound(t *testing.T, method string, url string, headers map[string]string) {
-	const expectedBody = `{"error":"404 page not found"}`
-	httphelper.HTTPDoWithValidationRetry(t, method, url, nil, headers, http.StatusForbidden, expectedBody, 10, 2*time.Second, nil)
+	HTTPDoWithCustomValidationRetry(t, method, url, headers,
+		func(status int, body string) bool {
+			if status != http.StatusForbidden {
+				return false
+			}
+			if body == `{"error":"404 page not found"}` {
+				return true
+			}
+			if strings.Contains(strings.ToLower(body), "nginx") {
+				return true
+			}
+			return false
+		}, 10, 2*time.Second,
+	)
 }
 
 func requireOK(t *testing.T, method string, url string, headers map[string]string) {
@@ -70,4 +95,21 @@ func newTestBasic(t *testing.T, username string) string {
 	t.Helper()
 	auth := fmt.Sprintf("%s:%s", username, "pass")
 	return base64.StdEncoding.EncodeToString([]byte(auth))
+}
+
+func HTTPDoWithCustomValidationRetry(t *testing.T, method string, url string, headers map[string]string, validateResponse func(int, string) bool, retries int, sleepBetweenRetries time.Duration) {
+	t.Helper()
+	_, err := retry.DoWithRetryE(
+		t,
+		fmt.Sprintf("HTTP %s to URL %s", method, url),
+		retries,
+		sleepBetweenRetries,
+		func() (string, error) {
+			httphelper.HTTPDoWithCustomValidation(t, method, url, nil, headers, validateResponse, nil)
+			return "ok", nil
+		},
+	)
+	if err != nil {
+		t.Fatalf("HTTP request failed after %d retries: %v", retries, err)
+	}
 }

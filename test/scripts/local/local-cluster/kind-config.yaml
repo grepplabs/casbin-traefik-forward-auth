@@ -14,3 +14,7 @@ nodes:
       - containerPort: 30080
         hostPort: 30080
         listenAddress: "127.0.0.1"
+      # ingress-nginx curl http://echo.127.0.0.1.nip.io:30180/get
+      - containerPort: 30180
+        hostPort: 30180
+        listenAddress: "127.0.0.1"

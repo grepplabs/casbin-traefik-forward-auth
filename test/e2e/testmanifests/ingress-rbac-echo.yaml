@@ -1,0 +1,47 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: echo-traefik-rbac
+  labels:
+    app: echo
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: traefik-casbin-auth-rbac@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: rbac.127.0.0.1.nip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: echo
+                port:
+                  number: 80
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: echo-nginx-rbac
+  labels:
+    app: echo
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: "http://casbin-auth-rbac.casbin-auth.svc.cluster.local/v1/auth"
+    nginx.ingress.kubernetes.io/auth-response-headers: "X-Casbin-Auth-JWT,WWW-Authenticate"
+    nginx.ingress.kubernetes.io/auth-method: GET
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: rbac.127.0.0.1.nip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: echo
+                port:
+                  number: 80

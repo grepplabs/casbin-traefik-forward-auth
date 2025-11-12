@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	casbinkube "github.com/grepplabs/casbin-kube"
@@ -16,6 +17,14 @@ var (
 const (
 	AdapterFile = "file"
 	AdapterKube = "kube"
+)
+
+type AuthHeaderSource = string
+
+const (
+	AuthHeaderSourceAuto      AuthHeaderSource = "auto"
+	AuthHeaderSourceForwarded AuthHeaderSource = "forwarded"
+	AuthHeaderSourceOriginal  AuthHeaderSource = "original"
 )
 
 type ServerConfig struct {
@@ -37,6 +46,7 @@ type MetricsConfig struct {
 type AuthConfig struct {
 	RouteConfigPath string
 	JWTConfig       JWTConfig
+	HeaderSource    AuthHeaderSource
 }
 
 type CasbinConfig struct {
@@ -105,6 +115,27 @@ func (c *JWTConfig) Validate() error {
 	}
 	if c.Audience == "" {
 		return errors.New("jwt-audience must be set when JWT validation is enabled")
+	}
+	return nil
+}
+
+func (a *AuthConfig) Validate() error {
+	switch a.HeaderSource {
+	case AuthHeaderSourceAuto, AuthHeaderSourceForwarded, AuthHeaderSourceOriginal:
+		// ok
+	default:
+		return fmt.Errorf(
+			"invalid auth-header-source %q (expected one of: %q, %q, %q)",
+			a.HeaderSource,
+			AuthHeaderSourceForwarded,
+			AuthHeaderSourceOriginal,
+			AuthHeaderSourceAuto,
+		)
+	}
+	if a.JWTConfig.Enabled {
+		if err := a.JWTConfig.Validate(); err != nil {
+			return fmt.Errorf("invalid JWT config: %w", err)
+		}
 	}
 	return nil
 }

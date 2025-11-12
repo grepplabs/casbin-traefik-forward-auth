@@ -10,6 +10,8 @@ serviceMonitor:
 application:
   env:
     LOG_FORMAT: "text"
+    LOG_LEVEL: "debug"
+    AUTH_HEADER_SOURCE: "auto"
     CASBIN_ADAPTER_KUBE_CONFIG_LABELS: "casbin.grepplabs.com/model=rbac"
   adapter:
     kube:

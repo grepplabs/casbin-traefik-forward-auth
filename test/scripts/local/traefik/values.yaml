@@ -41,6 +41,3 @@ providers:
     enabled: true
     allowCrossNamespace: true
 
-additionalArguments:
-  - "--entrypoints.web.http.middlewares=traefik-casbin-auth@kubernetescrd"
-  - "--entrypoints.websecure.http.middlewares=traefik-casbin-auth@kubernetescrd"
